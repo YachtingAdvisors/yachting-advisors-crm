@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 import { fetchLeadById, fetchAdInfo, parseLeadFields } from '@/lib/meta';
+import { Resend } from 'resend';
+import { ADMIN_EMAILS } from '@/lib/types';
+
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY);
+}
 
 // GET — Meta webhook verification
 export async function GET(req: NextRequest) {
@@ -66,6 +72,9 @@ export async function POST(req: NextRequest) {
           },
           { onConflict: 'meta_lead_id' }
         );
+
+        // Send email notification to users associated with this client
+        await sendLeadNotification(supabase, client, { name, email, phone, campaign, adName, formResponses });
       } catch (err) {
         console.error(`[Webhook] Failed to process lead ${leadgenId}:`, err);
       }
@@ -73,4 +82,66 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ received: true });
+}
+
+async function sendLeadNotification(
+  supabase: any,
+  client: any,
+  lead: {
+    name: string;
+    email: string | null;
+    phone: string | null;
+    campaign: string | null;
+    adName: string | null;
+    formResponses: Array<{ question: string; answer: string }>;
+  }
+) {
+  try {
+    // Get all users assigned to this client + admins
+    const { data: userClients } = await supabase
+      .from('user_clients')
+      .select('user_email')
+      .eq('client_id', client.id);
+
+    const recipients = new Set<string>(ADMIN_EMAILS);
+    for (const uc of userClients || []) {
+      if (uc.user_email) recipients.add(uc.user_email);
+    }
+
+    if (recipients.size === 0) return;
+
+    const formResponsesHtml = lead.formResponses
+      .map((fr) => `<tr><td style="padding:6px 12px;color:#9ca3af;border-bottom:1px solid #1f2937">${fr.question}</td><td style="padding:6px 12px;color:#e5e7eb;border-bottom:1px solid #1f2937">${fr.answer}</td></tr>`)
+      .join('');
+
+    const html = `
+      <div style="font-family:'DM Sans',system-ui,sans-serif;background:#0a0c10;color:#e5e7eb;padding:32px;border-radius:12px;max-width:560px">
+        <h2 style="color:#fff;margin:0 0 4px">New Lead from ${client.name}</h2>
+        <p style="color:#6b7280;margin:0 0 24px;font-size:14px">${lead.campaign || 'Meta Ads'}</p>
+
+        <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+          <tr><td style="padding:6px 12px;color:#9ca3af;border-bottom:1px solid #1f2937">Name</td><td style="padding:6px 12px;color:#fff;font-weight:600;border-bottom:1px solid #1f2937">${lead.name}</td></tr>
+          ${lead.email ? `<tr><td style="padding:6px 12px;color:#9ca3af;border-bottom:1px solid #1f2937">Email</td><td style="padding:6px 12px;border-bottom:1px solid #1f2937"><a href="mailto:${lead.email}" style="color:#60a5fa">${lead.email}</a></td></tr>` : ''}
+          ${lead.phone ? `<tr><td style="padding:6px 12px;color:#9ca3af;border-bottom:1px solid #1f2937">Phone</td><td style="padding:6px 12px;border-bottom:1px solid #1f2937"><a href="tel:${lead.phone}" style="color:#60a5fa">${lead.phone}</a></td></tr>` : ''}
+          ${lead.adName ? `<tr><td style="padding:6px 12px;color:#9ca3af;border-bottom:1px solid #1f2937">Ad</td><td style="padding:6px 12px;color:#e5e7eb;border-bottom:1px solid #1f2937">${lead.adName}</td></tr>` : ''}
+        </table>
+
+        ${formResponsesHtml ? `
+          <h3 style="color:#9ca3af;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin:20px 0 8px">Form Responses</h3>
+          <table style="width:100%;border-collapse:collapse">${formResponsesHtml}</table>
+        ` : ''}
+
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://yachting-advisors-crm.vercel.app'}" style="display:inline-block;margin-top:24px;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500">View in CRM</a>
+      </div>
+    `;
+
+    await getResend().emails.send({
+      from: process.env.RESEND_FROM_EMAIL || 'Yachting Advisors CRM <leads@yachtingadvisors.com>',
+      to: Array.from(recipients),
+      subject: `New Lead: ${lead.name} — ${client.name}`,
+      html,
+    });
+  } catch (err) {
+    console.error('[Email] Failed to send lead notification:', err);
+  }
 }
