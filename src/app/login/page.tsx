@@ -8,7 +8,9 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [resetMode, setResetMode] = useState(false);
   const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
@@ -32,6 +34,29 @@ export default function LoginPage() {
     router.refresh();
   }
 
+  async function handleReset(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    setMessage('');
+    if (!email) {
+      setError('Enter your email address');
+      return;
+    }
+    setLoading(true);
+
+    const supabase = createBrowserClient();
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/login/reset`,
+    });
+
+    if (resetError) {
+      setError(resetError.message);
+    } else {
+      setMessage('Check your email for a password reset link');
+    }
+    setLoading(false);
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#0a0c10] px-4">
       <div className="w-full max-w-sm">
@@ -42,10 +67,15 @@ export default function LoginPage() {
           Meta Leads CRM
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={resetMode ? handleReset : handleSubmit} className="space-y-4">
           {error && (
             <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-lg p-3">
               {error}
+            </div>
+          )}
+          {message && (
+            <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm rounded-lg p-3">
+              {message}
             </div>
           )}
 
@@ -62,25 +92,37 @@ export default function LoginPage() {
             />
           </div>
 
-          <div>
-            <label className="block text-xs text-gray-500 uppercase tracking-wider mb-1.5">
-              Password
-            </label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full bg-[#141620] border border-gray-700 rounded-lg text-sm text-gray-200 px-4 py-2.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            />
-          </div>
+          {!resetMode && (
+            <div>
+              <label className="block text-xs text-gray-500 uppercase tracking-wider mb-1.5">
+                Password
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full bg-[#141620] border border-gray-700 rounded-lg text-sm text-gray-200 px-4 py-2.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+          )}
 
           <button
             type="submit"
             disabled={loading}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition-colors disabled:opacity-50"
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading
+              ? resetMode ? 'Sending...' : 'Signing in...'
+              : resetMode ? 'Send Reset Link' : 'Sign In'}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => { setResetMode(!resetMode); setError(''); setMessage(''); }}
+            className="w-full text-sm text-gray-500 hover:text-gray-300 transition-colors"
+          >
+            {resetMode ? 'Back to Sign In' : 'Forgot password?'}
           </button>
         </form>
       </div>
