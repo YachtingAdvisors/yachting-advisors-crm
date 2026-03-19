@@ -1,11 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 import { fetchLeadById, fetchAdInfo, parseLeadFields } from '@/lib/meta';
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 import { ADMIN_EMAILS } from '@/lib/types';
 
-function getResend() {
-  return new Resend(process.env.RESEND_API_KEY);
+function getTransporter() {
+  return nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
 }
 
 // GET — Meta webhook verification
@@ -135,9 +143,10 @@ async function sendLeadNotification(
       </div>
     `;
 
-    await getResend().emails.send({
-      from: process.env.RESEND_FROM_EMAIL || 'Yachting Advisors CRM <leads@yachtingadvisors.com>',
-      to: Array.from(recipients),
+    const transporter = getTransporter();
+    await transporter.sendMail({
+      from: `Yachting Advisors CRM <${process.env.SMTP_USER}>`,
+      to: Array.from(recipients).join(', '),
       subject: `New Lead: ${lead.name} — ${client.name}`,
       html,
     });
