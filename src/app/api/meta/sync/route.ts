@@ -31,13 +31,13 @@ export async function POST() {
           try {
             const { name, email, phone, formResponses } = parseLeadFields(leadData.field_data || []);
 
-            let campaign: string | null = null;
+            let campaign: string | null = leadData.campaign_name || null;
             let adName: string | null = null;
             if (leadData.ad_id) {
               const adInfo = await fetchAdInfo(leadData.ad_id, client.meta_access_token);
               if (adInfo) {
                 adName = adInfo.name || null;
-                campaign = adInfo.campaign?.name || null;
+                if (!campaign) campaign = adInfo.campaign?.name || null;
               }
             }
 

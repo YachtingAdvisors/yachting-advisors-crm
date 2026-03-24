@@ -4,22 +4,68 @@
  * and upserts new leads into Supabase.
  */
 
-interface SheetConfig {
+export interface SheetConfig {
   spreadsheetId: string;
+  clientId: string;
   clientName: string;
-  gid?: string; // sheet tab id, defaults to 0
+  sourceName: string;
+  gid?: string;
 }
 
-export const SHEET_CONFIGS: SheetConfig[] = [
-  {
-    spreadsheetId: '1x2x69VEIz7rifRVH7XXf8D4gxlycwh81Ex6OquPWrlc',
-    clientName: 'Schafer Yachts',
-  },
-  {
-    spreadsheetId: '1ydCsmKxOYikuLvD999AJdm5RmQSmKnSZW7jFqdFXd-4',
-    clientName: 'Schafer Yachts',
-  },
+// Fallback hardcoded configs (used if sheet_sources table doesn't exist yet)
+const FALLBACK_CONFIGS = [
+  { spreadsheetId: '1x2x69VEIz7rifRVH7XXf8D4gxlycwh81Ex6OquPWrlc', clientName: 'Schafer Yachts', sourceName: 'Schafer Benetti Allora' },
+  { spreadsheetId: '1ydCsmKxOYikuLvD999AJdm5RmQSmKnSZW7jFqdFXd-4', clientName: 'Schafer Yachts', sourceName: 'Schafer PBIBS' },
 ];
+
+export async function fetchSheetConfigs(supabase: any): Promise<SheetConfig[]> {
+  try {
+    const { data, error } = await supabase
+      .from('sheet_sources')
+      .select('*, clients(id, name)')
+      .eq('enabled', true);
+
+    if (error || !data || data.length === 0) {
+      // Fall back to hardcoded configs
+      const configs: SheetConfig[] = [];
+      for (const fb of FALLBACK_CONFIGS) {
+        const { data: client } = await supabase
+          .from('clients')
+          .select('id, name')
+          .ilike('name', fb.clientName)
+          .maybeSingle();
+        if (client) {
+          configs.push({
+            spreadsheetId: fb.spreadsheetId,
+            clientId: client.id,
+            clientName: client.name,
+            sourceName: fb.sourceName,
+          });
+        }
+      }
+      return configs;
+    }
+
+    return data.map((row: any) => ({
+      spreadsheetId: row.spreadsheet_id,
+      clientId: row.clients?.id || row.client_id,
+      clientName: row.clients?.name || 'Unknown',
+      sourceName: row.source_name,
+      gid: row.gid || undefined,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export function parseSpreadsheetId(url: string): string | null {
+  // Handle full URLs like https://docs.google.com/spreadsheets/d/SPREADSHEET_ID/edit...
+  const match = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+  if (match) return match[1];
+  // If it's already just an ID
+  if (/^[a-zA-Z0-9_-]+$/.test(url.trim())) return url.trim();
+  return null;
+}
 
 interface ParsedLead {
   meta_lead_id: string;
@@ -38,7 +84,6 @@ function parseCSV(csv: string): Record<string, string>[] {
   const lines = csv.split('\n');
   if (lines.length < 2) return [];
 
-  // Parse header — handle quoted headers
   const headers = parseCSVLine(lines[0]);
   const rows: Record<string, string>[] = [];
 
@@ -83,7 +128,6 @@ function parseCSVLine(line: string): string[] {
 
 function cleanPhone(phone: string): string | null {
   if (!phone) return null;
-  // Remove "p:" prefix from Meta export format
   const cleaned = phone.replace(/^p:/, '').trim();
   return cleaned || null;
 }
@@ -91,7 +135,6 @@ function cleanPhone(phone: string): string | null {
 export function parseSheetRows(rows: Record<string, string>[]): ParsedLead[] {
   return rows
     .filter(row => {
-      // Skip test leads and rows without a valid id
       const id = row['id'] || '';
       const email = row['email'] || '';
       if (!id || id.includes('test lead')) return false;
@@ -101,7 +144,6 @@ export function parseSheetRows(rows: Record<string, string>[]): ParsedLead[] {
     .map(row => {
       const formResponses: Array<{ question: string; answer: string }> = [];
 
-      // Custom form questions
       const ownYacht = row['do_you_currently_own_a_yacht?'] || '';
       if (ownYacht) {
         formResponses.push({ question: 'Do you currently own a yacht?', answer: ownYacht });
@@ -136,22 +178,10 @@ export async function fetchSheetCSV(spreadsheetId: string, gid = '0'): Promise<s
   return res.text();
 }
 
-export async function syncSheet(
+export async function syncSheetByConfig(
   supabase: any,
   config: SheetConfig
 ): Promise<{ synced: number; skipped: number; errors: number }> {
-  // Look up client
-  const { data: client } = await supabase
-    .from('clients')
-    .select('*')
-    .ilike('name', config.clientName)
-    .maybeSingle();
-
-  if (!client) {
-    throw new Error(`Client "${config.clientName}" not found`);
-  }
-
-  // Fetch and parse sheet
   const csv = await fetchSheetCSV(config.spreadsheetId, config.gid || '0');
   const rows = parseCSV(csv);
   const leads = parseSheetRows(rows);
@@ -165,7 +195,7 @@ export async function syncSheet(
       const { error } = await supabase.from('leads').upsert(
         {
           meta_lead_id: lead.meta_lead_id,
-          client_id: client.id,
+          client_id: config.clientId,
           name: lead.name,
           email: lead.email,
           phone: lead.phone,
@@ -180,7 +210,6 @@ export async function syncSheet(
       );
 
       if (error) {
-        // If it's a unique constraint violation, it's a duplicate — skip
         if (error.code === '23505') {
           skipped++;
         } else {

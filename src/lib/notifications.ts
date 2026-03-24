@@ -83,7 +83,6 @@ export async function sendLeadNotification(
             <table style="width:100%;border-collapse:collapse">${formResponsesHtml}</table>
           ` : ''}
 
-          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://yachting-advisors-crm.vercel.app'}" style="display:inline-block;margin-top:24px;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500">View in CRM</a>
         </div>
       `;
 

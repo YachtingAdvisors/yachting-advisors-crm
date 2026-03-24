@@ -71,13 +71,21 @@ export default function DashboardPage() {
           </div>
           <div className="flex items-center gap-3">
             {admin && (
-              <button
-                onClick={handleSync}
-                disabled={syncing}
-                className="px-4 py-2 text-sm bg-[#141620] border border-gray-700 rounded-lg text-gray-300 hover:text-white hover:border-gray-500 transition-colors disabled:opacity-50"
-              >
-                {syncing ? 'Syncing...' : 'Sync Meta Leads'}
-              </button>
+              <>
+                <button
+                  onClick={() => router.push('/admin')}
+                  className="px-4 py-2 text-sm bg-[#141620] border border-gray-700 rounded-lg text-gray-300 hover:text-white hover:border-gray-500 transition-colors"
+                >
+                  Settings
+                </button>
+                <button
+                  onClick={handleSync}
+                  disabled={syncing}
+                  className="px-4 py-2 text-sm bg-[#141620] border border-gray-700 rounded-lg text-gray-300 hover:text-white hover:border-gray-500 transition-colors disabled:opacity-50"
+                >
+                  {syncing ? 'Syncing...' : 'Sync Meta Leads'}
+                </button>
+              </>
             )}
             <span className="text-sm text-gray-500">{user?.email}</span>
             <button

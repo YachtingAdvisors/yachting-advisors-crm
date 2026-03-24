@@ -34,6 +34,15 @@ export interface UserClient {
   user_email: string;
 }
 
+export interface NotificationSettings {
+  id: string;
+  client_id: string;
+  notification_emails: string[];
+  notification_phones: string[];
+  created_at: string;
+  updated_at: string;
+}
+
 export const ADMIN_EMAILS = [
   'shawn@yachtingadvisors.com',
   'josh@yachtingadvisors.com',

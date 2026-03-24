@@ -88,3 +88,21 @@ CREATE POLICY "Auth manage user_clients" ON user_clients FOR ALL TO authenticate
 -- Service role policies (for webhook inserts)
 CREATE POLICY "Service insert leads" ON leads FOR INSERT TO service_role WITH CHECK (true);
 CREATE POLICY "Service read clients" ON clients FOR SELECT TO service_role USING (true);
+
+-- Notification settings (per-client email + SMS recipients)
+CREATE TABLE notification_settings (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  client_id UUID NOT NULL REFERENCES clients(id) ON DELETE CASCADE UNIQUE,
+  notification_emails TEXT[] DEFAULT '{}',
+  notification_phones TEXT[] DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TRIGGER notification_settings_updated_at
+  BEFORE UPDATE ON notification_settings
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+ALTER TABLE notification_settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Auth manage notification_settings" ON notification_settings FOR ALL TO authenticated USING (true);
+CREATE POLICY "Service manage notification_settings" ON notification_settings FOR ALL TO service_role USING (true);

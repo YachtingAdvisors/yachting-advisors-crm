@@ -11,6 +11,8 @@ interface MetaLeadResponse {
   field_data: MetaFieldData[];
   ad_id?: string;
   form_id?: string;
+  campaign_id?: string;
+  campaign_name?: string;
 }
 
 interface MetaAdInfo {
@@ -25,7 +27,7 @@ interface MetaFormInfo {
 
 export async function fetchLeadById(leadgenId: string, accessToken: string): Promise<MetaLeadResponse> {
   const res = await fetch(
-    `${GRAPH_API_BASE}/${leadgenId}?access_token=${accessToken}`
+    `${GRAPH_API_BASE}/${leadgenId}?fields=id,created_time,field_data,ad_id,form_id,campaign_id,campaign_name&access_token=${accessToken}`
   );
   if (!res.ok) {
     const body = await res.text();
@@ -72,7 +74,7 @@ export async function fetchPageForms(pageId: string, accessToken: string): Promi
 
 export async function fetchFormLeads(formId: string, accessToken: string): Promise<MetaLeadResponse[]> {
   const allLeads: MetaLeadResponse[] = [];
-  let url: string | null = `${GRAPH_API_BASE}/${formId}/leads?access_token=${accessToken}&limit=50`;
+  let url: string | null = `${GRAPH_API_BASE}/${formId}/leads?fields=id,created_time,field_data,ad_id,form_id,campaign_id,campaign_name&access_token=${accessToken}&limit=50`;
 
   while (url) {
     const res: Response = await fetch(url);

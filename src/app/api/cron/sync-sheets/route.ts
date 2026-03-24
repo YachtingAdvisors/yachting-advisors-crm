@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
-import { SHEET_CONFIGS, syncSheet } from '@/lib/sheets-sync';
+import { fetchSheetConfigs, syncSheetByConfig } from '@/lib/sheets-sync';
 import { sendLeadNotification } from '@/lib/notifications';
 
 export const dynamic = 'force-dynamic';
@@ -14,35 +14,28 @@ export async function GET(req: NextRequest) {
   }
 
   const supabase = createServiceClient();
+  const configs = await fetchSheetConfigs(supabase);
   const results: Record<string, any> = {};
 
-  for (const config of SHEET_CONFIGS) {
+  for (const config of configs) {
     try {
       // Get existing lead IDs for this client to detect truly new ones
-      const { data: client } = await supabase
-        .from('clients')
-        .select('id')
-        .ilike('name', config.clientName)
-        .maybeSingle();
-
       let existingIds = new Set<string>();
-      if (client) {
-        const { data: existing } = await supabase
-          .from('leads')
-          .select('meta_lead_id')
-          .eq('client_id', client.id);
-        existingIds = new Set((existing || []).map((l: any) => l.meta_lead_id));
-      }
+      const { data: existing } = await supabase
+        .from('leads')
+        .select('meta_lead_id')
+        .eq('client_id', config.clientId);
+      existingIds = new Set((existing || []).map((l: any) => l.meta_lead_id));
 
-      const result = await syncSheet(supabase, config);
-      results[config.clientName] = result;
+      const result = await syncSheetByConfig(supabase, config);
+      results[config.sourceName] = result;
 
       // Send notifications for truly new leads (not previously in DB)
-      if (client && result.synced > 0) {
+      if (result.synced > 0) {
         const { data: newLeads } = await supabase
           .from('leads')
           .select('*')
-          .eq('client_id', client.id)
+          .eq('client_id', config.clientId)
           .eq('status', 'New')
           .order('created_at', { ascending: false })
           .limit(result.synced);
@@ -50,7 +43,7 @@ export async function GET(req: NextRequest) {
         const { data: fullClient } = await supabase
           .from('clients')
           .select('*')
-          .eq('id', client.id)
+          .eq('id', config.clientId)
           .single();
 
         for (const lead of newLeads || []) {
@@ -67,8 +60,8 @@ export async function GET(req: NextRequest) {
         }
       }
     } catch (err: any) {
-      console.error(`[Cron] Failed to sync ${config.clientName}:`, err);
-      results[config.clientName] = { error: err.message };
+      console.error(`[Cron] Failed to sync ${config.sourceName}:`, err);
+      results[config.sourceName] = { error: err.message };
     }
   }
 
