@@ -15,7 +15,10 @@ export const SHEET_CONFIGS: SheetConfig[] = [
     spreadsheetId: '1x2x69VEIz7rifRVH7XXf8D4gxlycwh81Ex6OquPWrlc',
     clientName: 'Schafer Yachts',
   },
-  // Add more sheets here as needed
+  {
+    spreadsheetId: '1ydCsmKxOYikuLvD999AJdm5RmQSmKnSZW7jFqdFXd-4',
+    clientName: 'Schafer Yachts',
+  },
 ];
 
 interface ParsedLead {
