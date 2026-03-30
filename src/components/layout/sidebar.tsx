@@ -100,8 +100,10 @@ export function Sidebar() {
 
           if (collapsed) {
             return (
-              <Tooltip key={item.href} delayDuration={0}>
-                <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
+              <Tooltip key={item.href}>
+                <TooltipTrigger render={<span />}>
+                  {linkContent}
+                </TooltipTrigger>
                 <TooltipContent side="right" className="font-medium">
                   {item.label}
                 </TooltipContent>

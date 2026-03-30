@@ -106,14 +106,14 @@ export function TopBar({ onMenuToggle }: { onMenuToggle?: () => void }) {
 
         {/* User menu */}
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <Avatar className="w-8 h-8">
-                <AvatarFallback className="bg-gold/20 text-gold text-xs font-semibold">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-            </Button>
+          <DropdownMenuTrigger
+            render={<Button variant="ghost" size="icon" className="rounded-full" />}
+          >
+            <Avatar className="w-8 h-8">
+              <AvatarFallback className="bg-gold/20 text-gold text-xs font-semibold">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <div className="px-3 py-2">
