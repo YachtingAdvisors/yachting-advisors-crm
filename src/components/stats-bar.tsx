@@ -5,18 +5,20 @@ interface StatsBarProps {
   newCount: number;
   qualifiedCount: number;
   convertedCount: number;
+  inactiveCount: number;
 }
 
-export default function StatsBar({ total, newCount, qualifiedCount, convertedCount }: StatsBarProps) {
+export default function StatsBar({ total, newCount, qualifiedCount, convertedCount, inactiveCount }: StatsBarProps) {
   const stats = [
     { label: 'Total Leads', value: total, color: 'text-white' },
     { label: 'New', value: newCount, color: 'text-blue-400' },
     { label: 'Qualified', value: qualifiedCount, color: 'text-amber-400' },
     { label: 'Converted', value: convertedCount, color: 'text-emerald-400' },
+    { label: 'Inactive', value: inactiveCount, color: 'text-gray-400' },
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
       {stats.map((s) => (
         <div
           key={s.label}

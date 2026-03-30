@@ -14,8 +14,8 @@ const dmMono = DM_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Yachting Advisors CRM',
-  description: 'Meta Leads CRM for Yachting Advisors',
+  title: 'Real Estate CRM | Yachting Advisors',
+  description: 'Real Estate MLS Deal Pipeline & Leads CRM',
 };
 
 export default function RootLayout({

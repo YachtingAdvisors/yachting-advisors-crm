@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Skip middleware for API routes, static assets, and login
+  // Skip proxy for API routes, static assets, and login
   if (
     pathname.startsWith('/api/') ||
     pathname.startsWith('/_next') ||

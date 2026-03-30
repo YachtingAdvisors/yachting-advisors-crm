@@ -12,7 +12,7 @@ export async function GET(
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { data, error } = await supabase
-    .from('leads')
+    .from('deals')
     .select('*, clients(name)')
     .eq('id', id)
     .single();
@@ -21,7 +21,6 @@ export async function GET(
     return NextResponse.json({ error: error.message }, { status: 404 });
   }
 
-  // Check access
   if (!isAdmin(user.email)) {
     const { data: uc } = await supabase
       .from('user_clients')
@@ -32,7 +31,7 @@ export async function GET(
     if (!uc) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
-  return NextResponse.json({ lead: data });
+  return NextResponse.json({ deal: data });
 }
 
 export async function PATCH(
@@ -46,15 +45,25 @@ export async function PATCH(
 
   const body = await req.json();
   const allowed: Record<string, unknown> = {};
-  if (body.status) allowed.status = body.status;
-  if (body.notes !== undefined) allowed.notes = body.notes;
+  const fields = [
+    'stage', 'contact_name', 'contact_email', 'contact_phone',
+    'property_address', 'property_type', 'mls_number',
+    'list_price', 'offer_price', 'sale_price',
+    'closing_date', 'agent_notes',
+  ];
+  for (const f of fields) {
+    // Use hasOwnProperty so that explicitly-sent null values (e.g. clearing
+    // closing_date or sale_price) are included in the update, while fields
+    // that were simply omitted from the request body are not.
+    if (Object.prototype.hasOwnProperty.call(body, f)) allowed[f] = body[f];
+  }
 
   if (Object.keys(allowed).length === 0) {
     return NextResponse.json({ error: 'No valid fields' }, { status: 400 });
   }
 
   const { data, error } = await supabase
-    .from('leads')
+    .from('deals')
     .update(allowed)
     .eq('id', id)
     .select()
@@ -64,7 +73,7 @@ export async function PATCH(
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ lead: data });
+  return NextResponse.json({ deal: data });
 }
 
 export async function DELETE(
@@ -76,32 +85,14 @@ export async function DELETE(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  // Fetch lead to verify access
-  const { data: lead, error: fetchError } = await supabase
-    .from('leads')
-    .select('client_id')
-    .eq('id', id)
-    .single();
-
-  if (fetchError || !lead) {
-    return NextResponse.json({ error: 'Lead not found' }, { status: 404 });
-  }
-
-  if (!isAdmin(user.email)) {
-    const { data: uc } = await supabase
-      .from('user_clients')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('client_id', lead.client_id)
-      .single();
-    if (!uc) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
-  const { error } = await supabase.from('leads').delete().eq('id', id);
+  const { error } = await supabase
+    .from('deals')
+    .delete()
+    .eq('id', id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ deleted: true });
 }

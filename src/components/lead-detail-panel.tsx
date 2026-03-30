@@ -1,21 +1,32 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Lead, LeadStatus } from '@/lib/types';
 import StatusBadge from './status-badge';
 import SourceBadge from './source-badge';
 
 const STATUSES: LeadStatus[] = ['New', 'Qualified', 'Converted', 'Inactive'];
 
+function daysSince(dateStr: string): number {
+  const created = new Date(dateStr).getTime();
+  const now = Date.now();
+  return Math.floor((now - created) / (1000 * 60 * 60 * 24));
+}
+
 interface Props {
   lead: Lead & { clients?: { name: string } };
   onClose: () => void;
   onUpdate: (lead: Lead) => void;
+  onDelete: (id: string) => void;
 }
 
-export default function LeadDetailPanel({ lead, onClose, onUpdate }: Props) {
+export default function LeadDetailPanel({ lead, onClose, onUpdate, onDelete }: Props) {
+  const router = useRouter();
   const [notes, setNotes] = useState(lead.notes || '');
   const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   async function updateField(field: string, value: string) {
     setSaving(true);
@@ -31,6 +42,21 @@ export default function LeadDetailPanel({ lead, onClose, onUpdate }: Props) {
       setSaving(false);
     }
   }
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/leads/${lead.id}`, { method: 'DELETE' });
+      if (res.ok) {
+        onDelete(lead.id);
+      }
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  const days = daysSince(lead.created_at);
+  const daysLabel = days === 0 ? 'Today' : days === 1 ? '1 day ago' : `${days} days ago`;
 
   return (
     <>
@@ -93,6 +119,27 @@ export default function LeadDetailPanel({ lead, onClose, onUpdate }: Props) {
             </select>
           </div>
 
+          {/* Convert to Deal button — shown for Qualified or Converted leads */}
+          {(lead.status === 'Qualified' || lead.status === 'Converted') && (
+            <div className="mb-6">
+              <button
+                onClick={() => {
+                  const params = new URLSearchParams({ new: '1' });
+                  if (lead.name) params.set('contact_name', lead.name);
+                  if (lead.email) params.set('contact_email', lead.email);
+                  if (lead.phone) params.set('contact_phone', lead.phone);
+                  router.push(`/deals?${params.toString()}`);
+                }}
+                className="w-full px-4 py-2.5 text-sm bg-blue-600/20 border border-blue-500/40 rounded-lg text-blue-300 hover:bg-blue-600/30 hover:border-blue-500/60 transition-colors flex items-center justify-center gap-2"
+              >
+                Convert to Deal
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                </svg>
+              </button>
+            </div>
+          )}
+
           {/* Details */}
           <div className="space-y-4 mb-6">
             {lead.campaign && (
@@ -118,6 +165,7 @@ export default function LeadDetailPanel({ lead, onClose, onUpdate }: Props) {
               <p className="text-sm text-gray-300 mt-1 font-mono">
                 {new Date(lead.created_at).toLocaleString()}
               </p>
+              <p className="text-xs text-gray-500 mt-0.5">{daysLabel}</p>
             </div>
           </div>
 
@@ -137,7 +185,7 @@ export default function LeadDetailPanel({ lead, onClose, onUpdate }: Props) {
           )}
 
           {/* Notes */}
-          <div>
+          <div className="mb-8">
             <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Notes</p>
             <textarea
               value={notes}
@@ -151,6 +199,39 @@ export default function LeadDetailPanel({ lead, onClose, onUpdate }: Props) {
               placeholder="Add notes..."
               className="w-full bg-[#141620] border border-gray-700 rounded-lg text-sm text-gray-200 p-3 placeholder-gray-600 focus:outline-none focus:border-blue-500 resize-none"
             />
+          </div>
+
+          {/* Delete Lead */}
+          <div className="border-t border-gray-800 pt-6">
+            {!confirmDelete ? (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="w-full px-4 py-2 text-sm bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg hover:bg-red-500/20 hover:border-red-500/50 transition-colors"
+              >
+                Delete Lead
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm text-gray-400 text-center">
+                  Are you sure you want to delete <span className="text-white font-medium">{lead.name}</span>? This cannot be undone.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setConfirmDelete(false)}
+                    className="flex-1 px-4 py-2 text-sm bg-[#141620] border border-gray-700 text-gray-400 rounded-lg hover:text-white hover:border-gray-500 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="flex-1 px-4 py-2 text-sm bg-red-600 border border-red-500 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                  >
+                    {deleting ? 'Deleting...' : 'Yes, Delete'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

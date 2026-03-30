@@ -27,6 +27,18 @@ body {
   animation: slide-in 0.2s ease-out;
 }
 
+/* Toast fade-in-out animation for deal panel notifications */
+@keyframes fade-in-out {
+  0% { opacity: 0; transform: translateY(-4px); }
+  15% { opacity: 1; transform: translateY(0); }
+  75% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-4px); }
+}
+
+.animate-fade-in-out {
+  animation: fade-in-out 2s ease-in-out forwards;
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 6px;
