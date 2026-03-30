@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createBrowserClient } from '@/lib/supabase';
-import { Deal, DealStage } from '@/lib/types';
+import { Deal, DealStage, DEAL_STAGES } from '@/lib/types';
 import DealStageBadge from './deal-stage-badge';
 import DealDetailPanel from './deal-detail-panel';
 import NewDealForm from './new-deal-form';
@@ -42,7 +42,7 @@ function closingDateColor(closingDate: string): string {
   const diffMs = closing.getTime() - today.getTime();
   const diffDays = diffMs / (1000 * 60 * 60 * 24);
   if (diffDays < 0) return 'text-red-500';
-  if (diffDays <= 7) return 'text-amber-400';
+  if (diffDays <= 7) return 'text-amber-500';
   return 'text-gray-500';
 }
 
@@ -59,6 +59,14 @@ export default function DealsPipeline({
   const [view, setView] = useState<'board' | 'table'>('board');
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
   const [showNewDeal, setShowNewDeal] = useState(false);
+
+  // CSV export state
+  const [exporting, setExporting] = useState(false);
+
+  // Bulk selection state (table view only)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkStage, setBulkStage] = useState<DealStage>('Prospecting');
+  const [bulkApplying, setBulkApplying] = useState(false);
 
   // Open new deal form automatically if instructed via URL params
   useEffect(() => {
@@ -176,6 +184,93 @@ export default function DealsPipeline({
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
   }
 
+  // --- CSV Export for Deals ---
+  function handleExportCSV() {
+    setExporting(true);
+    try {
+      const header = [
+        'Contact', 'Email', 'Phone', 'Property Address', 'Property Type',
+        'MLS #', 'List Price', 'Offer Price', 'Sale Price', 'Stage',
+        'Closing Date', 'Notes',
+      ];
+      const rows = deals.map((d) => [
+        d.contact_name,
+        d.contact_email || '',
+        d.contact_phone || '',
+        d.property_address || '',
+        d.property_type || '',
+        d.mls_number || '',
+        d.list_price ? String(d.list_price) : '',
+        d.offer_price ? String(d.offer_price) : '',
+        d.sale_price ? String(d.sale_price) : '',
+        d.stage,
+        d.closing_date ? new Date(d.closing_date).toLocaleDateString() : '',
+        d.agent_notes || '',
+      ]);
+
+      const csvContent = [header, ...rows]
+        .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+        .join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const today = new Date().toISOString().split('T')[0];
+      a.download = `deals-export-${today}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  // --- Bulk selection helpers (table view) ---
+  function toggleSelectAll(allDeals: Deal[]) {
+    if (selectedIds.size === allDeals.length && allDeals.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(allDeals.map((d) => d.id)));
+    }
+  }
+
+  function toggleSelectOne(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
+  async function handleBulkApply() {
+    if (selectedIds.size === 0) return;
+    setBulkApplying(true);
+    try {
+      for (const id of selectedIds) {
+        await fetch(`/api/deals/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ stage: bulkStage }),
+        });
+      }
+      setSelectedIds(new Set());
+      await fetchDeals();
+    } finally {
+      setBulkApplying(false);
+    }
+  }
+
+  // Clear selection when switching views or searching
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [view, search]);
+
   // Apply closing-month filter if active
   const filteredDeals = filterClosingMonth
     ? deals.filter((d) => {
@@ -192,20 +287,23 @@ export default function DealsPipeline({
   const totalPipelineValue = activeDeals.reduce((sum, d) => sum + (d.list_price || 0), 0);
   const soldDeals = deals.filter((d) => d.stage === 'Sold');
   const closedValue = soldDeals.reduce((sum, d) => sum + (d.sale_price || d.list_price || 0), 0);
+  const totalCommission = soldDeals.reduce((sum, d) => sum + (d.commission_amount || 0), 0);
 
   // Table view: active deals first, then closed (Sold + Lost) with a divider
   const activeTableDeals = filteredDeals.filter((d) => d.stage !== 'Sold' && d.stage !== 'Lost');
   const closedTableDeals = filteredDeals.filter((d) => d.stage === 'Sold' || d.stage === 'Lost');
+  const allTableDeals = [...activeTableDeals, ...closedTableDeals];
+  const allTableSelected = allTableDeals.length > 0 && selectedIds.size === allTableDeals.length;
 
   return (
     <div className="space-y-6">
       {/* Active filter notice */}
       {filterClosingMonth && (
-        <div className="flex items-center gap-3 px-4 py-2 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-          <span className="text-sm text-amber-400">Showing deals closing this month</span>
+        <div className="flex items-center gap-3 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+          <span className="text-sm text-amber-700">Showing deals closing this month</span>
           <button
             onClick={onClearFilter}
-            className="ml-auto text-xs text-amber-500 hover:text-amber-300 transition-colors"
+            className="ml-auto text-xs text-amber-700 hover:text-amber-900 transition-colors"
           >
             Clear filter ×
           </button>
@@ -213,22 +311,26 @@ export default function DealsPipeline({
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-[#141620] border border-gray-800 rounded-xl p-4">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+        <div className="bg-white shadow-sm border border-gray-200 rounded-xl p-4">
           <p className="text-xs text-gray-500 uppercase tracking-wider">Active Deals</p>
-          <p className="text-2xl font-semibold mt-1 text-white">{activeDeals.length}</p>
+          <p className="text-2xl font-semibold mt-1 text-[#1a1a2e]">{activeDeals.length}</p>
         </div>
-        <div className="bg-[#141620] border border-gray-800 rounded-xl p-4">
+        <div className="bg-white shadow-sm border border-gray-200 rounded-xl p-4">
           <p className="text-xs text-gray-500 uppercase tracking-wider">Pipeline Value</p>
-          <p className="text-2xl font-semibold mt-1 text-blue-400">{formatPrice(totalPipelineValue) || '$0'}</p>
+          <p className="text-2xl font-semibold mt-1 text-blue-600">{formatPrice(totalPipelineValue) || '$0'}</p>
         </div>
-        <div className="bg-[#141620] border border-gray-800 rounded-xl p-4">
+        <div className="bg-white shadow-sm border border-gray-200 rounded-xl p-4">
           <p className="text-xs text-gray-500 uppercase tracking-wider">Closed Won</p>
-          <p className="text-2xl font-semibold mt-1 text-emerald-400">{soldDeals.length}</p>
+          <p className="text-2xl font-semibold mt-1 text-emerald-600">{soldDeals.length}</p>
         </div>
-        <div className="bg-[#141620] border border-gray-800 rounded-xl p-4">
+        <div className="bg-white shadow-sm border border-gray-200 rounded-xl p-4">
           <p className="text-xs text-gray-500 uppercase tracking-wider">Closed Value</p>
-          <p className="text-2xl font-semibold mt-1 text-emerald-400">{formatPrice(closedValue) || '$0'}</p>
+          <p className="text-2xl font-semibold mt-1 text-emerald-600">{formatPrice(closedValue) || '$0'}</p>
+        </div>
+        <div className="bg-white shadow-sm border border-gray-200 rounded-xl p-4">
+          <p className="text-xs text-gray-500 uppercase tracking-wider">Total Commission</p>
+          <p className="text-2xl font-semibold mt-1 text-violet-600">{formatPrice(totalCommission) || '$0'}</p>
         </div>
       </div>
 
@@ -238,23 +340,30 @@ export default function DealsPipeline({
           <SearchBar value={search} onChange={setSearch} />
         </div>
         <div className="flex gap-2">
-          <div className="flex bg-[#141620] border border-gray-700 rounded-lg overflow-hidden">
+          <div className="flex bg-white border border-gray-200 rounded-lg overflow-hidden">
             <button
               onClick={() => setView('board')}
-              className={`px-3 py-1.5 text-sm transition-colors ${view === 'board' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
+              className={`px-3 py-1.5 text-sm transition-colors ${view === 'board' ? 'bg-[#ff7a59] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
             >
               Board
             </button>
             <button
               onClick={() => setView('table')}
-              className={`px-3 py-1.5 text-sm transition-colors ${view === 'table' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}
+              className={`px-3 py-1.5 text-sm transition-colors ${view === 'table' ? 'bg-[#ff7a59] text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
             >
               Table
             </button>
           </div>
           <button
+            onClick={handleExportCSV}
+            disabled={exporting}
+            className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {exporting ? 'Exporting...' : 'Export'}
+          </button>
+          <button
             onClick={() => setShowNewDeal(true)}
-            className="px-4 py-1.5 text-sm bg-blue-600 border border-blue-500 rounded-lg text-white hover:bg-blue-700 transition-colors"
+            className="px-4 py-1.5 text-sm bg-[#ff7a59] border border-[#ff7a59] rounded-lg text-white hover:bg-[#e8664a] transition-colors"
           >
             + New Deal
           </button>
@@ -265,15 +374,15 @@ export default function DealsPipeline({
         <div className="text-center py-12 text-gray-500">Loading deals...</div>
       ) : deals.length === 0 && !search ? (
         /* Global empty state */
-        <div className="flex flex-col items-center justify-center py-24 border border-dashed border-gray-700 rounded-xl">
-          <svg className="w-12 h-12 text-gray-700 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="bg-white flex flex-col items-center justify-center py-24 border border-dashed border-gray-300 rounded-xl">
+          <svg className="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
           <p className="text-gray-400 font-medium mb-1">No deals yet</p>
-          <p className="text-sm text-gray-600 mb-6">Start tracking your real estate transactions</p>
+          <p className="text-sm text-gray-400 mb-6">Start tracking your real estate transactions</p>
           <button
             onClick={() => setShowNewDeal(true)}
-            className="px-5 py-2.5 text-sm bg-blue-600 border border-blue-500 rounded-lg text-white hover:bg-blue-700 transition-colors"
+            className="px-5 py-2.5 text-sm bg-[#ff7a59] border border-[#ff7a59] rounded-lg text-white hover:bg-[#e8664a] transition-colors"
           >
             Create your first deal
           </button>
@@ -284,12 +393,12 @@ export default function DealsPipeline({
           {/* Left scroll shadow */}
           {showLeftShadow && (
             <div className="pointer-events-none absolute left-0 top-0 h-full w-12 z-10"
-              style={{ background: 'linear-gradient(to right, rgba(10,12,16,0.85), transparent)' }} />
+              style={{ background: 'linear-gradient(to right, rgba(245,248,250,0.9), transparent)' }} />
           )}
           {/* Right scroll shadow */}
           {showRightShadow && (
             <div className="pointer-events-none absolute right-0 top-0 h-full w-12 z-10"
-              style={{ background: 'linear-gradient(to left, rgba(10,12,16,0.85), transparent)' }} />
+              style={{ background: 'linear-gradient(to left, rgba(245,248,250,0.9), transparent)' }} />
           )}
 
           <div ref={boardScrollRef} className="overflow-x-auto pb-4">
@@ -305,7 +414,7 @@ export default function DealsPipeline({
                       <div className="flex flex-col items-end leading-none gap-0.5">
                         <span className="text-xs text-gray-400 font-medium">{stageDeals.length} {stageDeals.length === 1 ? 'deal' : 'deals'}</span>
                         {stageValue > 0 && (
-                          <span className="text-xs text-gray-600 font-mono">{formatPrice(stageValue)}</span>
+                          <span className="text-xs text-gray-500 font-mono">{formatPrice(stageValue)}</span>
                         )}
                       </div>
                     </div>
@@ -315,20 +424,20 @@ export default function DealsPipeline({
                         <div
                           key={deal.id}
                           onClick={() => setSelectedDeal(deal)}
-                          className="bg-[#141620] border border-gray-800 rounded-lg p-3 cursor-pointer hover:border-gray-600 transition-colors"
+                          className="bg-white shadow-sm border border-gray-200 rounded-lg p-3 cursor-pointer hover:border-gray-300 hover:shadow transition-colors"
                         >
-                          <p className="text-sm text-white font-medium truncate">{deal.contact_name}</p>
+                          <p className="text-sm text-[#1a1a2e] font-medium truncate">{deal.contact_name}</p>
                           {deal.property_address && (
                             <p className="text-xs text-gray-500 mt-1 truncate">{deal.property_address}</p>
                           )}
                           <div className="flex items-center justify-between mt-2">
                             {deal.list_price ? (
-                              <span className="text-xs text-blue-400 font-mono">{formatPrice(deal.list_price)}</span>
+                              <span className="text-xs text-[#0091ae] font-mono">{formatPrice(deal.list_price)}</span>
                             ) : (
                               <span />
                             )}
                             {deal.property_type && (
-                              <span className="text-xs text-gray-600">{deal.property_type}</span>
+                              <span className="text-xs text-gray-500">{deal.property_type}</span>
                             )}
                           </div>
                           {deal.closing_date && (
@@ -339,8 +448,8 @@ export default function DealsPipeline({
                         </div>
                       ))}
                       {stageDeals.length === 0 && (
-                        <div className="border border-dashed border-gray-800 rounded-lg p-4 text-center">
-                          <p className="text-xs text-gray-700">No deals</p>
+                        <div className="bg-white border border-dashed border-gray-300 rounded-lg p-4 text-center">
+                          <p className="text-xs text-gray-400">No deals</p>
                         </div>
                       )}
                     </div>
@@ -351,7 +460,7 @@ export default function DealsPipeline({
 
             {/* Closed stages row */}
             {(deals.some((d) => d.stage === 'Sold') || deals.some((d) => d.stage === 'Lost')) && (
-              <div className="grid grid-cols-2 gap-4 mt-6 border-t border-gray-800 pt-6">
+              <div className="grid grid-cols-2 gap-4 mt-6 border-t border-gray-200 pt-6">
                 {/* Sold */}
                 <div>
                   <div className="flex items-center justify-between mb-3 px-1">
@@ -361,7 +470,7 @@ export default function DealsPipeline({
                         {deals.filter((d) => d.stage === 'Sold').length} {deals.filter((d) => d.stage === 'Sold').length === 1 ? 'deal' : 'deals'}
                       </span>
                       {deals.filter((d) => d.stage === 'Sold').reduce((s, d) => s + (d.sale_price || d.list_price || 0), 0) > 0 && (
-                        <span className="text-xs text-gray-600 font-mono">
+                        <span className="text-xs text-gray-500 font-mono">
                           {formatPrice(deals.filter((d) => d.stage === 'Sold').reduce((s, d) => s + (d.sale_price || d.list_price || 0), 0))}
                         </span>
                       )}
@@ -372,14 +481,14 @@ export default function DealsPipeline({
                       <div
                         key={deal.id}
                         onClick={() => setSelectedDeal(deal)}
-                        className="bg-[#141620] border border-emerald-500/20 rounded-lg p-3 cursor-pointer hover:border-emerald-500/40 transition-colors"
+                        className="bg-white shadow-sm border border-emerald-200 rounded-lg p-3 cursor-pointer hover:border-emerald-300 hover:shadow transition-colors"
                       >
-                        <p className="text-sm text-white font-medium truncate">{deal.contact_name}</p>
+                        <p className="text-sm text-[#1a1a2e] font-medium truncate">{deal.contact_name}</p>
                         {deal.property_address && (
                           <p className="text-xs text-gray-500 mt-1 truncate">{deal.property_address}</p>
                         )}
                         {deal.sale_price && (
-                          <p className="text-xs text-emerald-400 font-mono mt-1">{formatPrice(deal.sale_price)}</p>
+                          <p className="text-xs text-emerald-600 font-mono mt-1">{formatPrice(deal.sale_price)}</p>
                         )}
                       </div>
                     ))}
@@ -398,9 +507,9 @@ export default function DealsPipeline({
                       <div
                         key={deal.id}
                         onClick={() => setSelectedDeal(deal)}
-                        className="bg-[#141620] border border-red-500/20 rounded-lg p-3 cursor-pointer hover:border-red-500/40 transition-colors"
+                        className="bg-white shadow-sm border border-red-200 rounded-lg p-3 cursor-pointer hover:border-red-300 hover:shadow transition-colors"
                       >
-                        <p className="text-sm text-white font-medium truncate">{deal.contact_name}</p>
+                        <p className="text-sm text-[#1a1a2e] font-medium truncate">{deal.contact_name}</p>
                         {deal.property_address && (
                           <p className="text-xs text-gray-500 mt-1 truncate">{deal.property_address}</p>
                         )}
@@ -414,10 +523,18 @@ export default function DealsPipeline({
         </div>
       ) : (
         /* Table View */
-        <div className="overflow-x-auto border border-gray-800 rounded-xl">
+        <div className="relative overflow-x-auto bg-white border border-gray-200 rounded-xl">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-gray-800 text-left">
+              <tr className="border-b border-gray-200 bg-gray-50 text-left">
+                <th className="px-3 py-3 w-10">
+                  <input
+                    type="checkbox"
+                    checked={allTableSelected}
+                    onChange={() => toggleSelectAll(allTableDeals)}
+                    className="rounded border-gray-300 bg-white text-blue-600 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
+                  />
+                </th>
                 <th className="px-4 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Contact</th>
                 <th className="px-4 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Property</th>
                 <th className="px-4 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Type</th>
@@ -430,7 +547,7 @@ export default function DealsPipeline({
             <tbody>
               {filteredDeals.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-gray-500">
+                  <td colSpan={8} className="px-4 py-12 text-center text-gray-500">
                     No deals found. Click &quot;+ New Deal&quot; to create one.
                   </td>
                 </tr>
@@ -441,13 +558,21 @@ export default function DealsPipeline({
                     <tr
                       key={deal.id}
                       onClick={() => setSelectedDeal(deal)}
-                      className="border-b border-gray-800/50 hover:bg-[#141620] cursor-pointer transition-colors"
+                      className="border-b border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors"
                     >
-                      <td className="px-4 py-3 text-white font-medium whitespace-nowrap">{deal.contact_name}</td>
-                      <td className="px-4 py-3 text-gray-400 text-xs max-w-[200px] truncate">{deal.property_address || '---'}</td>
-                      <td className="px-4 py-3 text-gray-400 text-xs">{deal.property_type || '---'}</td>
-                      <td className="px-4 py-3 text-gray-400 font-mono text-xs">{deal.mls_number || '---'}</td>
-                      <td className="px-4 py-3 text-blue-400 font-mono text-xs">{formatPrice(deal.list_price) || '---'}</td>
+                      <td className="px-3 py-3 w-10" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(deal.id)}
+                          onChange={() => toggleSelectOne(deal.id)}
+                          className="rounded border-gray-300 bg-white text-blue-600 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-[#1a1a2e] font-medium whitespace-nowrap">{deal.contact_name}</td>
+                      <td className="px-4 py-3 text-gray-500 text-xs max-w-[200px] truncate">{deal.property_address || '---'}</td>
+                      <td className="px-4 py-3 text-gray-500 text-xs">{deal.property_type || '---'}</td>
+                      <td className="px-4 py-3 text-gray-500 font-mono text-xs">{deal.mls_number || '---'}</td>
+                      <td className="px-4 py-3 text-[#0091ae] font-mono text-xs">{formatPrice(deal.list_price) || '---'}</td>
                       <td className="px-4 py-3"><DealStageBadge stage={deal.stage} /></td>
                       <td className={`px-4 py-3 font-mono text-xs whitespace-nowrap ${deal.closing_date ? closingDateColor(deal.closing_date) : 'text-gray-500'}`}>
                         {deal.closing_date ? new Date(deal.closing_date).toLocaleDateString() : '---'}
@@ -458,7 +583,7 @@ export default function DealsPipeline({
                   {/* Closed deals divider */}
                   {closedTableDeals.length > 0 && (
                     <tr>
-                      <td colSpan={7} className="px-4 py-2 bg-[#0d0f17] border-t-2 border-gray-700">
+                      <td colSpan={8} className="px-4 py-2 bg-gray-50 border-t border-gray-200">
                         <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Closed Deals</span>
                       </td>
                     </tr>
@@ -469,13 +594,21 @@ export default function DealsPipeline({
                     <tr
                       key={deal.id}
                       onClick={() => setSelectedDeal(deal)}
-                      className="border-b border-gray-800/30 hover:bg-[#141620] cursor-pointer transition-colors opacity-70"
+                      className="border-b border-gray-200 bg-gray-50/50 hover:bg-gray-50 cursor-pointer transition-colors"
                     >
-                      <td className="px-4 py-3 text-white font-medium whitespace-nowrap">{deal.contact_name}</td>
-                      <td className="px-4 py-3 text-gray-400 text-xs max-w-[200px] truncate">{deal.property_address || '---'}</td>
-                      <td className="px-4 py-3 text-gray-400 text-xs">{deal.property_type || '---'}</td>
-                      <td className="px-4 py-3 text-gray-400 font-mono text-xs">{deal.mls_number || '---'}</td>
-                      <td className="px-4 py-3 text-blue-400 font-mono text-xs">{formatPrice(deal.list_price) || '---'}</td>
+                      <td className="px-3 py-3 w-10" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(deal.id)}
+                          onChange={() => toggleSelectOne(deal.id)}
+                          className="rounded border-gray-300 bg-white text-blue-600 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-[#1a1a2e] font-medium whitespace-nowrap">{deal.contact_name}</td>
+                      <td className="px-4 py-3 text-gray-500 text-xs max-w-[200px] truncate">{deal.property_address || '---'}</td>
+                      <td className="px-4 py-3 text-gray-500 text-xs">{deal.property_type || '---'}</td>
+                      <td className="px-4 py-3 text-gray-500 font-mono text-xs">{deal.mls_number || '---'}</td>
+                      <td className="px-4 py-3 text-[#0091ae] font-mono text-xs">{formatPrice(deal.list_price) || '---'}</td>
                       <td className="px-4 py-3"><DealStageBadge stage={deal.stage} /></td>
                       <td className="px-4 py-3 text-gray-500 font-mono text-xs whitespace-nowrap">
                         {deal.closing_date ? new Date(deal.closing_date).toLocaleDateString() : '---'}
@@ -486,6 +619,35 @@ export default function DealsPipeline({
               )}
             </tbody>
           </table>
+
+          {/* Bulk action bar (table view) */}
+          {selectedIds.size > 0 && (
+            <div className="sticky bottom-0 left-0 right-0 bg-gray-50 border-t border-gray-200 px-4 py-3 flex items-center gap-4 z-20">
+              <span className="text-sm text-[#1a1a2e] font-medium">{selectedIds.size} selected</span>
+              <select
+                value={bulkStage}
+                onChange={(e) => setBulkStage(e.target.value as DealStage)}
+                className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 bg-white text-[#33475b] focus:border-[#0091ae] focus:outline-none"
+              >
+                {DEAL_STAGES.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+              <button
+                onClick={handleBulkApply}
+                disabled={bulkApplying}
+                className="px-4 py-1.5 text-sm bg-[#ff7a59] border border-[#ff7a59] rounded-lg text-white hover:bg-[#e8664a] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {bulkApplying ? 'Applying...' : 'Apply'}
+              </button>
+              <button
+                onClick={() => setSelectedIds(new Set())}
+                className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                Clear
+              </button>
+            </div>
+          )}
         </div>
       )}
 

@@ -1,15 +1,19 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-background: #0a0c10;
-  --color-foreground: #e5e7eb;
+  --color-background: #f5f8fa;
+  --color-foreground: #33475b;
+  --color-hubspot-orange: #ff7a59;
+  --color-hubspot-teal: #0091ae;
+  --color-hubspot-navy: #2d3e50;
+  --color-hubspot-dark: #1a1a2e;
   --font-sans: 'DM Sans', system-ui, sans-serif;
   --font-mono: 'DM Mono', ui-monospace, monospace;
 }
 
 body {
-  background: #0a0c10;
-  color: #e5e7eb;
+  background: #f5f8fa;
+  color: #33475b;
   font-family: 'DM Sans', system-ui, sans-serif;
 }
 
@@ -49,10 +53,10 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #374151;
+  background: #cbd6e2;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #4b5563;
+  background: #99acc2;
 }

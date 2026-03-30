@@ -6,6 +6,7 @@ import { createBrowserClient } from '@/lib/supabase';
 import { isAdmin, Deal } from '@/lib/types';
 import DealsPipeline from '@/components/deals-pipeline';
 import ClientSelector from '@/components/client-selector';
+import { useShortcuts } from '@/components/shortcuts-provider';
 
 function ClosingThisMonthBanner({ onFilter }: { onFilter: () => void }) {
   const [count, setCount] = useState<number | null>(null);
@@ -34,15 +35,15 @@ function ClosingThisMonthBanner({ onFilter }: { onFilter: () => void }) {
   return (
     <button
       onClick={onFilter}
-      className="w-full text-left mb-6 px-4 py-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center gap-3 hover:bg-amber-500/20 hover:border-amber-500/50 transition-colors"
+      className="w-full text-left mb-6 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3 hover:bg-amber-100 hover:border-amber-300 transition-colors"
     >
-      <svg className="w-5 h-5 text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg className="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
       </svg>
-      <span className="text-sm font-medium text-amber-400">
+      <span className="text-sm font-medium text-amber-700">
         {count} deal{count !== 1 ? 's' : ''} closing this month
       </span>
-      <span className="text-xs text-amber-500 ml-auto">Click to filter →</span>
+      <span className="text-xs text-amber-600 ml-auto">Click to filter &rarr;</span>
     </button>
   );
 }
@@ -71,34 +72,34 @@ function RecentActivity() {
   }
 
   const stageBadgeClass: Record<string, string> = {
-    Prospecting: 'bg-slate-500/20 text-slate-400 border-slate-500/30',
-    'Pre-Approval': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-    Showings: 'bg-violet-500/20 text-violet-400 border-violet-500/30',
-    'Offer Submitted': 'bg-amber-500/20 text-amber-400 border-amber-500/30',
-    'Under Contract': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-    Inspection: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
-    Appraisal: 'bg-teal-500/20 text-teal-400 border-teal-500/30',
-    Closing: 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
-    Sold: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-    Lost: 'bg-red-500/20 text-red-400 border-red-500/30',
+    Prospecting: 'bg-slate-100 text-slate-600 border-slate-200',
+    'Pre-Approval': 'bg-blue-50 text-blue-600 border-blue-200',
+    Showings: 'bg-violet-50 text-violet-600 border-violet-200',
+    'Offer Submitted': 'bg-amber-50 text-amber-600 border-amber-200',
+    'Under Contract': 'bg-orange-50 text-orange-600 border-orange-200',
+    Inspection: 'bg-cyan-50 text-cyan-600 border-cyan-200',
+    Appraisal: 'bg-teal-50 text-teal-600 border-teal-200',
+    Closing: 'bg-indigo-50 text-indigo-600 border-indigo-200',
+    Sold: 'bg-emerald-50 text-emerald-600 border-emerald-200',
+    Lost: 'bg-red-50 text-red-600 border-red-200',
   };
 
   return (
     <div className="mt-8">
-      <h2 className="text-sm font-medium text-gray-400 uppercase tracking-wider mb-3">Recent Activity</h2>
-      <div className="bg-[#141620] border border-gray-800 rounded-xl divide-y divide-gray-800/50">
+      <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Recent Activity</h2>
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm divide-y divide-gray-100">
         {recentDeals.map((deal) => (
           <div key={deal.id} className="flex items-center gap-3 px-4 py-3">
             <div className="flex-1 min-w-0">
-              <span className="text-sm text-white font-medium truncate block">{deal.contact_name}</span>
+              <span className="text-sm text-[#1a1a2e] font-medium truncate block">{deal.contact_name}</span>
               {deal.property_address && (
                 <span className="text-xs text-gray-500 truncate block">{deal.property_address}</span>
               )}
             </div>
-            <span className={`text-xs px-2 py-0.5 rounded border flex-shrink-0 ${stageBadgeClass[deal.stage] ?? 'bg-gray-500/20 text-gray-400 border-gray-500/30'}`}>
+            <span className={`text-xs px-2 py-0.5 rounded border flex-shrink-0 ${stageBadgeClass[deal.stage] ?? 'bg-gray-100 text-gray-500 border-gray-200'}`}>
               {deal.stage}
             </span>
-            <span className="text-xs text-gray-600 font-mono flex-shrink-0 w-16 text-right">{timeAgo(deal.updated_at)}</span>
+            <span className="text-xs text-gray-400 font-mono flex-shrink-0 w-16 text-right">{timeAgo(deal.updated_at)}</span>
           </div>
         ))}
       </div>
@@ -113,6 +114,7 @@ function DealsPageInner() {
   const [filterClosingMonth, setFilterClosingMonth] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { openCommandPalette } = useShortcuts();
 
   // Read URL params for pre-filling new deal form
   const newDealParam = searchParams.get('new');
@@ -152,30 +154,48 @@ function DealsPageInner() {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-gray-800 px-6 py-4">
+      <header className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <h1 className="text-lg font-semibold text-white">Real Estate CRM</h1>
+            <h1 className="text-lg font-semibold text-[#1a1a2e]">Real Estate CRM</h1>
             <ClientSelector value={clientId} onChange={setClientId} showAll={admin} />
           </div>
           <div className="flex items-center gap-3">
-            <nav className="flex gap-1 bg-[#141620] border border-gray-700 rounded-lg overflow-hidden mr-3">
+            <nav className="flex gap-1 bg-gray-100 border border-gray-200 rounded-lg overflow-hidden mr-3">
               <button
                 onClick={() => router.push('/')}
-                className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
+                className="px-4 py-2 text-sm text-[#33475b] hover:bg-gray-50 transition-colors"
               >
                 Leads
               </button>
               <button
-                className="px-4 py-2 text-sm bg-blue-600 text-white"
+                className="px-4 py-2 text-sm bg-[#ff7a59] text-white"
               >
                 Deals
               </button>
+              <button
+                onClick={() => router.push('/contacts')}
+                className="px-4 py-2 text-sm text-[#33475b] hover:bg-gray-50 transition-colors"
+              >
+                Contacts
+              </button>
+              <button
+                onClick={() => router.push('/analytics')}
+                className="px-4 py-2 text-sm text-[#33475b] hover:bg-gray-50 transition-colors"
+              >
+                Analytics
+              </button>
             </nav>
+            <button
+              onClick={openCommandPalette}
+              className="bg-white border border-gray-300 text-gray-500 text-xs px-2 py-1 rounded hover:border-gray-400 hover:text-[#33475b] transition-colors"
+            >
+              {'\u2318'}K
+            </button>
             {admin && (
               <button
                 onClick={() => router.push('/admin')}
-                className="px-4 py-2 text-sm bg-[#141620] border border-gray-700 rounded-lg text-gray-300 hover:text-white hover:border-gray-500 transition-colors"
+                className="px-4 py-2 text-sm bg-white border border-gray-300 rounded-lg text-[#33475b] hover:bg-gray-50 hover:border-gray-400 transition-colors"
               >
                 Settings
               </button>
@@ -183,7 +203,7 @@ function DealsPageInner() {
             <span className="text-sm text-gray-500">{user?.email}</span>
             <button
               onClick={handleLogout}
-              className="text-sm text-gray-500 hover:text-white transition-colors"
+              className="text-sm text-gray-500 hover:text-[#33475b] transition-colors"
             >
               Sign Out
             </button>

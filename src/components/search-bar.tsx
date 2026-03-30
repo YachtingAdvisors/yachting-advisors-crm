@@ -42,7 +42,7 @@ export default function SearchBar({
         placeholder="Search leads..."
         value={local}
         onChange={(e) => handleChange(e.target.value)}
-        className="w-full pl-10 pr-4 py-2 bg-[#141620] border border-gray-700 rounded-lg text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+        className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg text-sm text-[#33475b] placeholder-gray-400 focus:outline-none focus:border-[#0091ae] focus:ring-1 focus:ring-[#0091ae]/20"
       />
     </div>
   );

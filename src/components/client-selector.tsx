@@ -25,7 +25,7 @@ export default function ClientSelector({ value, onChange, showAll = false }: Pro
     <select
       value={value || ''}
       onChange={(e) => onChange(e.target.value || null)}
-      className="bg-[#141620] border border-gray-700 rounded-lg text-sm text-gray-200 px-3 py-2 focus:outline-none focus:border-blue-500"
+      className="bg-white border border-gray-300 rounded-lg text-sm text-[#33475b] px-3 py-2 focus:outline-none focus:border-[#0091ae] focus:ring-1 focus:ring-[#0091ae]/20"
     >
       {showAll && <option value="">All Clients</option>}
       {clients.map((c) => (

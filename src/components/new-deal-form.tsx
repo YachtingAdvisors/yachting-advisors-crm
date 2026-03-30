@@ -32,6 +32,9 @@ export default function NewDealForm({ clientId, onClose, onCreate, initialValues
     stage: 'Prospecting' as DealStage,
     closing_date: '',
     agent_notes: '',
+    commission_rate: '',
+    buyer_agent: '',
+    listing_agent: '',
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -70,6 +73,9 @@ export default function NewDealForm({ clientId, onClose, onCreate, initialValues
           list_price: form.list_price ? parseFloat(form.list_price) : null,
           property_type: form.property_type || null,
           closing_date: form.closing_date || null,
+          commission_rate: form.commission_rate ? parseFloat(form.commission_rate) : null,
+          buyer_agent: form.buyer_agent || null,
+          listing_agent: form.listing_agent || null,
         }),
       });
       const data = await res.json();
@@ -86,16 +92,16 @@ export default function NewDealForm({ clientId, onClose, onCreate, initialValues
     }
   }
 
-  const inputClass = "w-full bg-[#141620] border border-gray-700 rounded-lg text-sm text-gray-200 px-3 py-2 placeholder-gray-600 focus:outline-none focus:border-blue-500";
+  const inputClass = "w-full bg-white border border-gray-300 rounded-lg text-sm text-[#33475b] px-3 py-2 placeholder-gray-400 focus:outline-none focus:border-[#0091ae]";
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/50 z-40" onClick={onClose} />
-      <div className="fixed right-0 top-0 h-full w-full max-w-lg bg-[#0d0f17] border-l border-gray-800 z-50 overflow-y-auto animate-slide-in">
+      <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose} />
+      <div className="fixed right-0 top-0 h-full w-full max-w-lg bg-white border-l border-gray-200 z-50 overflow-y-auto animate-slide-in">
         <form onSubmit={handleSubmit} className="p-6">
           <div className="flex items-start justify-between mb-6">
-            <h2 className="text-xl font-semibold text-white">New Deal</h2>
-            <button type="button" onClick={onClose} className="text-gray-500 hover:text-white p-1">
+            <h2 className="text-xl font-semibold text-[#1a1a2e]">New Deal</h2>
+            <button type="button" onClick={onClose} className="text-gray-400 hover:text-[#33475b] p-1">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
@@ -103,7 +109,7 @@ export default function NewDealForm({ clientId, onClose, onCreate, initialValues
           </div>
 
           {error && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-sm text-red-400">
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
               {error}
             </div>
           )}
@@ -236,6 +242,46 @@ export default function NewDealForm({ clientId, onClose, onCreate, initialValues
               />
             </div>
 
+            {/* Commission & Agents */}
+            <div className="border-t border-gray-200 pt-4 mt-4">
+              <p className="text-xs text-gray-500 uppercase tracking-wider mb-3">Commission & Agents</p>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-gray-500 uppercase tracking-wider block mb-1.5">Commission Rate (%)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={form.commission_rate}
+                    onChange={(e) => setForm({ ...form, commission_rate: e.target.value })}
+                    placeholder="e.g. 3.0"
+                    className={inputClass}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-gray-500 uppercase tracking-wider block mb-1.5">Buyer Agent</label>
+                    <input
+                      type="text"
+                      value={form.buyer_agent}
+                      onChange={(e) => setForm({ ...form, buyer_agent: e.target.value })}
+                      placeholder="Agent name"
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 uppercase tracking-wider block mb-1.5">Listing Agent</label>
+                    <input
+                      type="text"
+                      value={form.listing_agent}
+                      onChange={(e) => setForm({ ...form, listing_agent: e.target.value })}
+                      placeholder="Agent name"
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Notes */}
             <div>
               <label className="text-xs text-gray-500 uppercase tracking-wider block mb-1.5">Agent Notes</label>
@@ -253,14 +299,14 @@ export default function NewDealForm({ clientId, onClose, onCreate, initialValues
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 text-sm bg-[#141620] border border-gray-700 rounded-lg text-gray-300 hover:text-white hover:border-gray-500 transition-colors"
+              className="flex-1 px-4 py-2.5 text-sm bg-white border border-gray-300 rounded-lg text-gray-600 hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 px-4 py-2.5 text-sm bg-blue-600 border border-blue-500 rounded-lg text-white hover:bg-blue-700 transition-colors disabled:opacity-50"
+              className="flex-1 px-4 py-2.5 text-sm bg-[#ff7a59] border border-[#ff7a59] rounded-lg text-white hover:bg-[#e8664a] transition-colors disabled:opacity-50"
             >
               {saving ? 'Creating...' : 'Create Deal'}
             </button>

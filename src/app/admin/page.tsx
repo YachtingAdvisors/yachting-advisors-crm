@@ -226,12 +226,12 @@ export default function AdminSettingsPage() {
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-gray-800 px-6 py-4">
+      <header className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-white">Admin Settings</h1>
+          <h1 className="text-lg font-semibold text-[#1a1a2e]">Admin Settings</h1>
           <button
             onClick={() => router.push('/')}
-            className="text-sm text-gray-500 hover:text-white transition-colors"
+            className="text-sm text-gray-500 hover:text-[#33475b] transition-colors"
           >
             Back to Dashboard
           </button>
@@ -240,16 +240,16 @@ export default function AdminSettingsPage() {
 
       <main className="max-w-3xl mx-auto px-6 py-8 space-y-8">
         {/* ========== GOOGLE SHEET SOURCES ========== */}
-        <div className="bg-[#141620] border border-gray-800 rounded-xl p-6">
-          <h2 className="text-white font-medium mb-1">Google Sheet Sources</h2>
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+          <h2 className="text-[#1a1a2e] font-medium mb-1">Google Sheet Sources</h2>
           <p className="text-gray-500 text-sm mb-4">
             Connect Google Sheets to automatically import leads. Sheets sync every 5 minutes.
             Make sure each sheet is shared publicly (Anyone with the link).
           </p>
 
           {tableMissing && (
-            <div className="bg-yellow-900/20 border border-yellow-700/50 rounded-lg p-3 mb-4">
-              <p className="text-yellow-400 text-sm">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+              <p className="text-yellow-700 text-sm">
                 The sheet_sources table hasn&apos;t been created yet. Using fallback configs.
                 Run the setup SQL in Supabase Dashboard to enable this feature.
               </p>
@@ -262,18 +262,18 @@ export default function AdminSettingsPage() {
               {sheetSources.map((source) => (
                 <div
                   key={source.id}
-                  className="flex items-center justify-between bg-[#0a0c10] border border-gray-700 rounded-lg px-4 py-3"
+                  className="flex items-center justify-between bg-[#f5f8fa] border border-gray-200 rounded-lg px-4 py-3"
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-white truncate">
+                      <span className="text-sm font-medium text-[#1a1a2e] truncate">
                         {source.sourceName}
                       </span>
                       <span className="text-xs text-gray-500">
                         {source.clientName}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-600 truncate mt-0.5">
+                    <p className="text-xs text-gray-400 truncate mt-0.5">
                       ID: {source.spreadsheetId.slice(0, 20)}...
                     </p>
                   </div>
@@ -281,13 +281,13 @@ export default function AdminSettingsPage() {
                     <button
                       onClick={() => handleSyncNow(source)}
                       disabled={syncingId === source.id}
-                      className="text-xs text-blue-400 hover:text-blue-300 transition-colors disabled:opacity-50"
+                      className="text-xs text-[#0091ae] hover:text-[#007a94] transition-colors disabled:opacity-50"
                     >
                       {syncingId === source.id ? 'Syncing...' : 'Sync Now'}
                     </button>
                     <button
                       onClick={() => handleRemoveSheet(source.id)}
-                      className="text-xs text-gray-500 hover:text-red-400 transition-colors"
+                      className="text-xs text-gray-500 hover:text-red-500 transition-colors"
                     >
                       Remove
                     </button>
@@ -299,14 +299,14 @@ export default function AdminSettingsPage() {
 
           {/* Add new sheet form */}
           {!tableMissing && (
-            <div className="space-y-3 border-t border-gray-800 pt-4">
-              <h3 className="text-sm text-gray-400 font-medium">Connect New Sheet</h3>
+            <div className="space-y-3 border-t border-gray-200 pt-4">
+              <h3 className="text-sm text-gray-500 font-medium">Connect New Sheet</h3>
               <input
                 type="text"
                 value={sheetUrl}
                 onChange={(e) => setSheetUrl(e.target.value)}
                 placeholder="Paste Google Sheets URL..."
-                className="w-full bg-[#0a0c10] border border-gray-700 rounded-lg text-sm text-gray-200 px-4 py-2.5 focus:outline-none focus:border-blue-500"
+                className="w-full bg-white border border-gray-300 rounded-lg text-sm text-[#33475b] px-4 py-2.5 focus:outline-none focus:border-[#ff7a59]"
               />
               <div className="flex gap-2">
                 <input
@@ -314,21 +314,21 @@ export default function AdminSettingsPage() {
                   value={sheetSourceName}
                   onChange={(e) => setSheetSourceName(e.target.value)}
                   placeholder="Source name (e.g. Schafer PBIBS)"
-                  className="flex-1 bg-[#0a0c10] border border-gray-700 rounded-lg text-sm text-gray-200 px-4 py-2.5 focus:outline-none focus:border-blue-500"
+                  className="flex-1 bg-white border border-gray-300 rounded-lg text-sm text-[#33475b] px-4 py-2.5 focus:outline-none focus:border-[#ff7a59]"
                 />
                 <input
                   type="text"
                   value={sheetGid}
                   onChange={(e) => setSheetGid(e.target.value)}
                   placeholder="GID (optional)"
-                  className="w-28 bg-[#0a0c10] border border-gray-700 rounded-lg text-sm text-gray-200 px-4 py-2.5 focus:outline-none focus:border-blue-500"
+                  className="w-28 bg-white border border-gray-300 rounded-lg text-sm text-[#33475b] px-4 py-2.5 focus:outline-none focus:border-[#ff7a59]"
                 />
               </div>
               <div className="flex gap-2">
                 <select
                   value={sheetClientId}
                   onChange={(e) => setSheetClientId(e.target.value)}
-                  className="flex-1 bg-[#0a0c10] border border-gray-700 rounded-lg text-sm text-gray-200 px-4 py-2.5 focus:outline-none focus:border-blue-500"
+                  className="flex-1 bg-white border border-gray-300 rounded-lg text-sm text-[#33475b] px-4 py-2.5 focus:outline-none focus:border-[#ff7a59]"
                 >
                   {clients.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -339,7 +339,7 @@ export default function AdminSettingsPage() {
                 <button
                   onClick={handleAddSheet}
                   disabled={addingSheet || !sheetUrl || !sheetSourceName}
-                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                  className="px-5 py-2.5 bg-[#ff7a59] hover:bg-[#e8664a] text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
                 >
                   {addingSheet ? 'Connecting...' : 'Connect'}
                 </button>
@@ -349,7 +349,7 @@ export default function AdminSettingsPage() {
 
           {sheetMessage && (
             <p
-              className={`mt-3 text-sm ${sheetMessage.startsWith('Error') ? 'text-red-400' : 'text-emerald-400'}`}
+              className={`mt-3 text-sm ${sheetMessage.startsWith('Error') ? 'text-red-500' : 'text-emerald-600'}`}
             >
               {sheetMessage}
             </p>
@@ -365,7 +365,7 @@ export default function AdminSettingsPage() {
           <select
             value={selectedClientId}
             onChange={(e) => setSelectedClientId(e.target.value)}
-            className="w-full bg-[#141620] border border-gray-700 rounded-lg text-sm text-gray-200 px-4 py-2.5 focus:outline-none focus:border-blue-500"
+            className="w-full bg-white border border-gray-300 rounded-lg text-sm text-[#33475b] px-4 py-2.5 focus:outline-none focus:border-[#ff7a59]"
           >
             {clients.map((c) => (
               <option key={c.id} value={c.id}>
@@ -376,8 +376,8 @@ export default function AdminSettingsPage() {
         </div>
 
         {/* Notification Emails */}
-        <div className="bg-[#141620] border border-gray-800 rounded-xl p-6">
-          <h2 className="text-white font-medium mb-1">Notification Emails</h2>
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+          <h2 className="text-[#1a1a2e] font-medium mb-1">Notification Emails</h2>
           <p className="text-gray-500 text-sm mb-4">
             These email addresses will receive an email when a new lead comes in for this client.
           </p>
@@ -387,12 +387,12 @@ export default function AdminSettingsPage() {
               {emails.map((email) => (
                 <div
                   key={email}
-                  className="flex items-center justify-between bg-[#0a0c10] border border-gray-700 rounded-lg px-4 py-2"
+                  className="flex items-center justify-between bg-[#f5f8fa] border border-gray-200 rounded-lg px-4 py-2"
                 >
-                  <span className="text-sm text-gray-300">{email}</span>
+                  <span className="text-sm text-[#33475b]">{email}</span>
                   <button
                     onClick={() => removeEmail(email)}
-                    className="text-gray-500 hover:text-red-400 transition-colors text-sm"
+                    className="text-gray-500 hover:text-red-500 transition-colors text-sm"
                   >
                     Remove
                   </button>
@@ -408,11 +408,11 @@ export default function AdminSettingsPage() {
               onChange={(e) => setNewEmail(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addEmail()}
               placeholder="email@example.com"
-              className="flex-1 bg-[#0a0c10] border border-gray-700 rounded-lg text-sm text-gray-200 px-4 py-2.5 focus:outline-none focus:border-blue-500"
+              className="flex-1 bg-white border border-gray-300 rounded-lg text-sm text-[#33475b] px-4 py-2.5 focus:outline-none focus:border-[#ff7a59]"
             />
             <button
               onClick={addEmail}
-              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+              className="px-4 py-2.5 bg-[#ff7a59] hover:bg-[#e8664a] text-white text-sm font-medium rounded-lg transition-colors"
             >
               Add
             </button>
@@ -420,8 +420,8 @@ export default function AdminSettingsPage() {
         </div>
 
         {/* SMS Notifications */}
-        <div className="bg-[#141620] border border-gray-800 rounded-xl p-6">
-          <h2 className="text-white font-medium mb-1">SMS Notifications</h2>
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+          <h2 className="text-[#1a1a2e] font-medium mb-1">SMS Notifications</h2>
           <p className="text-gray-500 text-sm mb-4">
             These phone numbers will receive a text message when a new lead comes in.
             Format: +1XXXXXXXXXX. Note: +14106937337 always receives texts by default.
@@ -432,12 +432,12 @@ export default function AdminSettingsPage() {
               {phones.map((phone) => (
                 <div
                   key={phone}
-                  className="flex items-center justify-between bg-[#0a0c10] border border-gray-700 rounded-lg px-4 py-2"
+                  className="flex items-center justify-between bg-[#f5f8fa] border border-gray-200 rounded-lg px-4 py-2"
                 >
-                  <span className="text-sm text-gray-300">{phone}</span>
+                  <span className="text-sm text-[#33475b]">{phone}</span>
                   <button
                     onClick={() => removePhone(phone)}
-                    className="text-gray-500 hover:text-red-400 transition-colors text-sm"
+                    className="text-gray-500 hover:text-red-500 transition-colors text-sm"
                   >
                     Remove
                   </button>
@@ -453,11 +453,11 @@ export default function AdminSettingsPage() {
               onChange={(e) => setNewPhone(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addPhone()}
               placeholder="+14155551234"
-              className="flex-1 bg-[#0a0c10] border border-gray-700 rounded-lg text-sm text-gray-200 px-4 py-2.5 focus:outline-none focus:border-blue-500"
+              className="flex-1 bg-white border border-gray-300 rounded-lg text-sm text-[#33475b] px-4 py-2.5 focus:outline-none focus:border-[#ff7a59]"
             />
             <button
               onClick={addPhone}
-              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+              className="px-4 py-2.5 bg-[#ff7a59] hover:bg-[#e8664a] text-white text-sm font-medium rounded-lg transition-colors"
             >
               Add
             </button>
@@ -469,13 +469,13 @@ export default function AdminSettingsPage() {
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+            className="px-6 py-2.5 bg-[#ff7a59] hover:bg-[#e8664a] text-white font-medium rounded-lg transition-colors disabled:opacity-50"
           >
             {saving ? 'Saving...' : 'Save Notification Settings'}
           </button>
           {message && (
             <span
-              className={`text-sm ${message.startsWith('Error') ? 'text-red-400' : 'text-emerald-400'}`}
+              className={`text-sm ${message.startsWith('Error') ? 'text-red-500' : 'text-emerald-600'}`}
             >
               {message}
             </span>

@@ -50,9 +50,9 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0a0c10] px-4">
-      <div className="w-full max-w-sm">
-        <h1 className="text-2xl font-bold text-white text-center mb-2">
+    <div className="min-h-screen flex items-center justify-center bg-[#f5f8fa] px-4">
+      <div className="w-full max-w-sm bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+        <h1 className="text-2xl font-bold text-[#1a1a2e] text-center mb-2">
           Reset Password
         </h1>
         <p className="text-gray-500 text-center mb-8 text-sm">
@@ -64,7 +64,7 @@ export default function ResetPasswordPage() {
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-sm rounded-lg p-3">
+              <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg p-3">
                 {error}
               </div>
             )}
@@ -79,7 +79,7 @@ export default function ResetPasswordPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
-                className="w-full bg-[#141620] border border-gray-700 rounded-lg text-sm text-gray-200 px-4 py-2.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="w-full bg-white border border-gray-300 rounded-lg text-sm text-[#33475b] px-4 py-2.5 focus:outline-none focus:border-[#ff7a59] focus:ring-1 focus:ring-[#ff7a59]"
               />
             </div>
 
@@ -93,14 +93,14 @@ export default function ResetPasswordPage() {
                 onChange={(e) => setConfirm(e.target.value)}
                 required
                 minLength={6}
-                className="w-full bg-[#141620] border border-gray-700 rounded-lg text-sm text-gray-200 px-4 py-2.5 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                className="w-full bg-white border border-gray-300 rounded-lg text-sm text-[#33475b] px-4 py-2.5 focus:outline-none focus:border-[#ff7a59] focus:ring-1 focus:ring-[#ff7a59]"
               />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 rounded-lg transition-colors disabled:opacity-50"
+              className="w-full bg-[#ff7a59] hover:bg-[#e8664a] text-white font-medium py-2.5 rounded-lg transition-colors disabled:opacity-50"
             >
               {loading ? 'Updating...' : 'Update Password'}
             </button>

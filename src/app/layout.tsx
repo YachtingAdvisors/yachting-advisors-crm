@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { DM_Sans, DM_Mono } from 'next/font/google';
+import ClientLayout from '@/components/client-layout';
 import './globals.css';
 
 const dmSans = DM_Sans({
@@ -25,8 +26,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${dmSans.variable} ${dmMono.variable} h-full`}>
-      <body className="min-h-full bg-[#0a0c10] text-gray-200 antialiased">
-        {children}
+      <body className="min-h-full bg-[#f5f8fa] text-[#33475b] antialiased">
+        <ClientLayout>{children}</ClientLayout>
       </body>
     </html>
   );

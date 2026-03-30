@@ -50,6 +50,7 @@ export async function PATCH(
     'property_address', 'property_type', 'mls_number',
     'list_price', 'offer_price', 'sale_price',
     'closing_date', 'agent_notes',
+    'commission_rate', 'commission_amount', 'buyer_agent', 'listing_agent',
   ];
   for (const f of fields) {
     // Use hasOwnProperty so that explicitly-sent null values (e.g. clearing

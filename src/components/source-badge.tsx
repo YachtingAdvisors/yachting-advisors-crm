@@ -3,9 +3,9 @@
 import { LeadSource } from '@/lib/types';
 
 const SOURCE_STYLES: Record<LeadSource, string> = {
-  Meta: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  Instagram: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
-  Website: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+  Meta: 'bg-blue-50 text-blue-700 border-blue-200',
+  Instagram: 'bg-purple-50 text-purple-700 border-purple-200',
+  Website: 'bg-emerald-50 text-emerald-700 border-emerald-200',
 };
 
 export default function SourceBadge({ source }: { source: LeadSource }) {

@@ -79,6 +79,10 @@ export async function POST(req: NextRequest) {
       stage: body.stage || 'Prospecting',
       closing_date: body.closing_date || null,
       agent_notes: body.agent_notes || null,
+      commission_rate: body.commission_rate != null ? body.commission_rate : null,
+      commission_amount: body.commission_amount != null ? body.commission_amount : null,
+      buyer_agent: body.buyer_agent || null,
+      listing_agent: body.listing_agent || null,
     })
     .select()
     .single();
