@@ -1,24 +1,23 @@
 import type { Metadata } from 'next';
-import { DM_Sans, DM_Mono, Geist } from 'next/font/google';
+import { DM_Sans, DM_Mono } from 'next/font/google';
+import { Toaster } from '@/components/ui/sonner';
 import './globals.css';
-import { cn } from "@/lib/utils";
-
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+import { cn } from '@/lib/utils';
 
 const dmSans = DM_Sans({
-  variable: '--font-dm-sans',
+  variable: '--font-sans',
   subsets: ['latin'],
 });
 
 const dmMono = DM_Mono({
-  variable: '--font-dm-mono',
+  variable: '--font-mono',
   weight: ['400', '500'],
   subsets: ['latin'],
 });
 
 export const metadata: Metadata = {
   title: 'Yachting Advisors CRM',
-  description: 'Meta Leads CRM for Yachting Advisors',
+  description: 'Premium CRM for Yachting & Real Estate',
 };
 
 export default function RootLayout({
@@ -27,9 +26,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={cn("h-full", dmSans.variable, dmMono.variable, "font-sans", geist.variable)}>
-      <body className="min-h-full bg-[#0a0c10] text-gray-200 antialiased">
+    <html lang="en" className={cn('h-full', dmSans.variable, dmMono.variable)}>
+      <body className="min-h-full bg-background text-foreground antialiased">
         {children}
+        <Toaster richColors position="top-right" />
       </body>
     </html>
   );
