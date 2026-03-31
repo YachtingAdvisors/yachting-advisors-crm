@@ -6,6 +6,12 @@ import { useRouter } from 'next/navigation';
 
 type Mode = 'login' | 'signup' | 'reset';
 
+const ALLOWED_DOMAIN = 'yachtingadvisors.com';
+
+function isAllowedEmail(email: string): boolean {
+  return email.toLowerCase().endsWith(`@${ALLOWED_DOMAIN}`);
+}
+
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,6 +33,11 @@ export default function LoginPage() {
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+
+    if (!isAllowedEmail(email)) {
+      setError(`Only @${ALLOWED_DOMAIN} email addresses are allowed.`);
+      return;
+    }
     setLoading(true);
 
     const supabase = createBrowserClient();
@@ -50,6 +61,10 @@ export default function LoginPage() {
     setError('');
     setMessage('');
 
+    if (!isAllowedEmail(email)) {
+      setError(`Only @${ALLOWED_DOMAIN} email addresses are allowed.`);
+      return;
+    }
     if (password.length < 6) {
       setError('Password must be at least 6 characters');
       return;

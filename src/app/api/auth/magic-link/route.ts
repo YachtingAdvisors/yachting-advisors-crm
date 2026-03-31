@@ -30,6 +30,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
 
+    if (!email.toLowerCase().endsWith('@yachtingadvisors.com')) {
+      return NextResponse.json({ error: 'Only @yachtingadvisors.com emails are allowed.' }, { status: 403 });
+    }
+
     const supabase = getAdminClient();
 
     // Check if user exists
