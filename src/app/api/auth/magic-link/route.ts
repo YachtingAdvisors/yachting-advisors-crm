@@ -71,8 +71,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Send the magic link via our own SMTP
-    const magicLink = data.properties.action_link;
+    // Rewrite the base URL to production (Supabase generates links using its Site URL setting which may be localhost)
+    const rawLink = data.properties.action_link;
+    const prodOrigin = req.nextUrl.origin;
+    const magicLink = rawLink.replace(/^https?:\/\/localhost:\d+/, prodOrigin);
     const transporter = getTransporter();
 
     await transporter.sendMail({
