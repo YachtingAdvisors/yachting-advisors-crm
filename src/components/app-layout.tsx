@@ -4,6 +4,7 @@ import { type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import AppSidebar from '@/components/app-sidebar';
+import OnboardingTour from '@/components/onboarding-tour';
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -36,6 +37,7 @@ function AuthenticatedLayout({ children }: { children: ReactNode }) {
         userEmail={user?.email}
       />
       <div className="ml-[60px] flex-1">{children}</div>
+      <OnboardingTour />
     </div>
   );
 }
