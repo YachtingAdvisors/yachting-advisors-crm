@@ -35,7 +35,7 @@ const TOUR_STEPS: TourStep[] = [
     target: '[data-tour="nav-deals"]',
     title: 'Deals Pipeline',
     description:
-      'Track your real estate deals through every stage \u2014 from Prospecting all the way to Closing. Use the Kanban board or table view.',
+      'Track your deals through every stage of the sales pipeline. Use the Kanban board or table view.',
     position: 'right',
   },
   {

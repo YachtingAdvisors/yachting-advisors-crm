@@ -21,7 +21,7 @@ function ClosingThisMonthBanner({ onFilter }: { onFilter: () => void }) {
         const thisYear = now.getFullYear();
         const closing = deals.filter((d) => {
           if (!d.closing_date) return false;
-          if (d.stage === 'Sold' || d.stage === 'Lost') return false;
+          if (d.stage === 'Won' || d.stage === 'Lost') return false;
           const cd = new Date(d.closing_date);
           return cd.getMonth() === thisMonth && cd.getFullYear() === thisYear;
         });
@@ -73,14 +73,13 @@ function RecentActivity() {
 
   const stageBadgeClass: Record<string, string> = {
     Prospecting: 'bg-slate-100 text-slate-600 border-slate-200',
-    'Pre-Approval': 'bg-blue-50 text-blue-600 border-blue-200',
-    Showings: 'bg-violet-50 text-violet-600 border-violet-200',
-    'Offer Submitted': 'bg-amber-50 text-amber-600 border-amber-200',
-    'Under Contract': 'bg-orange-50 text-orange-600 border-orange-200',
-    Inspection: 'bg-cyan-50 text-cyan-600 border-cyan-200',
-    Appraisal: 'bg-teal-50 text-teal-600 border-teal-200',
+    Discovery: 'bg-blue-50 text-blue-600 border-blue-200',
+    Proposal: 'bg-violet-50 text-violet-600 border-violet-200',
+    Negotiation: 'bg-amber-50 text-amber-600 border-amber-200',
+    'Contract Sent': 'bg-orange-50 text-orange-600 border-orange-200',
+    'Under Review': 'bg-cyan-50 text-cyan-600 border-cyan-200',
     Closing: 'bg-indigo-50 text-indigo-600 border-indigo-200',
-    Sold: 'bg-emerald-50 text-emerald-600 border-emerald-200',
+    Won: 'bg-emerald-50 text-emerald-600 border-emerald-200',
     Lost: 'bg-red-50 text-red-600 border-red-200',
   };
 
@@ -92,8 +91,8 @@ function RecentActivity() {
           <div key={deal.id} className="flex items-center gap-3 px-4 py-3">
             <div className="flex-1 min-w-0">
               <span className="text-sm text-[#1a1a2e] font-medium truncate block">{deal.contact_name}</span>
-              {deal.property_address && (
-                <span className="text-xs text-gray-500 truncate block">{deal.property_address}</span>
+              {deal.description && (
+                <span className="text-xs text-gray-500 truncate block">{deal.description}</span>
               )}
             </div>
             <span className={`text-xs px-2 py-0.5 rounded border flex-shrink-0 ${stageBadgeClass[deal.stage] ?? 'bg-gray-100 text-gray-500 border-gray-200'}`}>

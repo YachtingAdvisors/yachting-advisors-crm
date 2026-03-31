@@ -1,9 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Deal, DealStage, DEAL_STAGES, PropertyType } from '@/lib/types';
-
-const PROPERTY_TYPES: PropertyType[] = ['Single Family', 'Condo', 'Townhouse', 'Multi-Family', 'Land', 'Commercial'];
+import { Deal, DealStage, DEAL_STAGES } from '@/lib/types';
 
 interface InitialValues {
   contact_name?: string;
@@ -25,9 +23,7 @@ export default function NewDealForm({ clientId, onClose, onCreate, initialValues
     contact_name: initialValues?.contact_name || '',
     contact_email: initialValues?.contact_email || '',
     contact_phone: initialValues?.contact_phone || '',
-    property_address: '',
-    property_type: '' as PropertyType | '',
-    mls_number: '',
+    description: '',
     list_price: '',
     stage: 'Prospecting' as DealStage,
     closing_date: '',
@@ -71,7 +67,6 @@ export default function NewDealForm({ clientId, onClose, onCreate, initialValues
         body: JSON.stringify({
           ...form,
           list_price: form.list_price ? parseFloat(form.list_price) : null,
-          property_type: form.property_type || null,
           closing_date: form.closing_date || null,
           commission_rate: form.commission_rate ? parseFloat(form.commission_rate) : null,
           buyer_agent: form.buyer_agent || null,
@@ -166,43 +161,16 @@ export default function NewDealForm({ clientId, onClose, onCreate, initialValues
               </div>
             </div>
 
-            {/* Property Address */}
+            {/* Description */}
             <div>
-              <label className="text-xs text-gray-500 uppercase tracking-wider block mb-1.5">Property Address</label>
-              <input
-                type="text"
-                value={form.property_address}
-                onChange={(e) => setForm({ ...form, property_address: e.target.value })}
-                placeholder="123 Main St, City, ST 12345"
-                className={inputClass}
+              <label className="text-xs text-gray-500 uppercase tracking-wider block mb-1.5">Description</label>
+              <textarea
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                rows={2}
+                placeholder="Brief description of this deal..."
+                className={`${inputClass} resize-none`}
               />
-            </div>
-
-            {/* Property Type & MLS */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs text-gray-500 uppercase tracking-wider block mb-1.5">Property Type</label>
-                <select
-                  value={form.property_type}
-                  onChange={(e) => setForm({ ...form, property_type: e.target.value as PropertyType })}
-                  className={inputClass}
-                >
-                  <option value="">Select type</option>
-                  {PROPERTY_TYPES.map((t) => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs text-gray-500 uppercase tracking-wider block mb-1.5">MLS #</label>
-                <input
-                  type="text"
-                  value={form.mls_number}
-                  onChange={(e) => setForm({ ...form, mls_number: e.target.value })}
-                  placeholder="MLS-12345"
-                  className={inputClass}
-                />
-              </div>
             </div>
 
             {/* Price & Stage */}

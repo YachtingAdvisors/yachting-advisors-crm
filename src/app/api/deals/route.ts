@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
   }
   if (search) {
     query = query.or(
-      `contact_name.ilike.%${search}%,contact_email.ilike.%${search}%,property_address.ilike.%${search}%,mls_number.ilike.%${search}%`
+      `contact_name.ilike.%${search}%,contact_email.ilike.%${search}%,description.ilike.%${search}%`
     );
   }
 
@@ -71,9 +71,7 @@ export async function POST(req: NextRequest) {
       contact_name: body.contact_name,
       contact_email: body.contact_email || null,
       contact_phone: body.contact_phone || null,
-      property_address: body.property_address || null,
-      property_type: body.property_type || null,
-      mls_number: body.mls_number || null,
+      description: body.description || null,
       list_price: body.list_price || null,
       offer_price: body.offer_price || null,
       stage: body.stage || 'Prospecting',

@@ -24,12 +24,11 @@ interface Props {
 
 const PIPELINE_STAGES: DealStage[] = [
   'Prospecting',
-  'Pre-Approval',
-  'Showings',
-  'Offer Submitted',
-  'Under Contract',
-  'Inspection',
-  'Appraisal',
+  'Discovery',
+  'Proposal',
+  'Negotiation',
+  'Contract Sent',
+  'Under Review',
   'Closing',
 ];
 
@@ -189,17 +188,15 @@ export default function DealsPipeline({
     setExporting(true);
     try {
       const header = [
-        'Contact', 'Email', 'Phone', 'Property Address', 'Property Type',
-        'MLS #', 'List Price', 'Offer Price', 'Sale Price', 'Stage',
+        'Contact', 'Email', 'Phone', 'Description',
+        'List Price', 'Offer Price', 'Sale Price', 'Stage',
         'Closing Date', 'Notes',
       ];
       const rows = deals.map((d) => [
         d.contact_name,
         d.contact_email || '',
         d.contact_phone || '',
-        d.property_address || '',
-        d.property_type || '',
-        d.mls_number || '',
+        d.description || '',
         d.list_price ? String(d.list_price) : '',
         d.offer_price ? String(d.offer_price) : '',
         d.sale_price ? String(d.sale_price) : '',
@@ -275,7 +272,7 @@ export default function DealsPipeline({
   const filteredDeals = filterClosingMonth
     ? deals.filter((d) => {
         if (!d.closing_date) return false;
-        if (d.stage === 'Sold' || d.stage === 'Lost') return false;
+        if (d.stage === 'Won' || d.stage === 'Lost') return false;
         const now = new Date();
         const cd = new Date(d.closing_date);
         return cd.getMonth() === now.getMonth() && cd.getFullYear() === now.getFullYear();
@@ -283,15 +280,15 @@ export default function DealsPipeline({
     : deals;
 
   // Pipeline stats
-  const activeDeals = deals.filter((d) => d.stage !== 'Sold' && d.stage !== 'Lost');
+  const activeDeals = deals.filter((d) => d.stage !== 'Won' && d.stage !== 'Lost');
   const totalPipelineValue = activeDeals.reduce((sum, d) => sum + (d.list_price || 0), 0);
-  const soldDeals = deals.filter((d) => d.stage === 'Sold');
+  const soldDeals = deals.filter((d) => d.stage === 'Won');
   const closedValue = soldDeals.reduce((sum, d) => sum + (d.sale_price || d.list_price || 0), 0);
   const totalCommission = soldDeals.reduce((sum, d) => sum + (d.commission_amount || 0), 0);
 
   // Table view: active deals first, then closed (Sold + Lost) with a divider
-  const activeTableDeals = filteredDeals.filter((d) => d.stage !== 'Sold' && d.stage !== 'Lost');
-  const closedTableDeals = filteredDeals.filter((d) => d.stage === 'Sold' || d.stage === 'Lost');
+  const activeTableDeals = filteredDeals.filter((d) => d.stage !== 'Won' && d.stage !== 'Lost');
+  const closedTableDeals = filteredDeals.filter((d) => d.stage === 'Won' || d.stage === 'Lost');
   const allTableDeals = [...activeTableDeals, ...closedTableDeals];
   const allTableSelected = allTableDeals.length > 0 && selectedIds.size === allTableDeals.length;
 
@@ -379,7 +376,7 @@ export default function DealsPipeline({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
           <p className="text-gray-400 font-medium mb-1">No deals yet</p>
-          <p className="text-sm text-gray-400 mb-6">Start tracking your real estate transactions</p>
+          <p className="text-sm text-gray-400 mb-6">Start tracking your deals</p>
           <button
             onClick={() => setShowNewDeal(true)}
             className="px-5 py-2.5 text-sm bg-[#ff7a59] border border-[#ff7a59] rounded-lg text-white hover:bg-[#e8664a] transition-colors"
@@ -427,17 +424,14 @@ export default function DealsPipeline({
                           className="bg-white shadow-sm border border-gray-200 rounded-lg p-2.5 cursor-pointer hover:border-gray-300 hover:shadow transition-colors"
                         >
                           <p className="text-xs text-[#1a1a2e] font-medium truncate">{deal.contact_name}</p>
-                          {deal.property_address && (
-                            <p className="text-xs text-gray-500 mt-1 truncate">{deal.property_address}</p>
+                          {deal.description && (
+                            <p className="text-xs text-gray-500 mt-1 truncate">{deal.description}</p>
                           )}
                           <div className="flex items-center justify-between mt-2">
                             {deal.list_price ? (
                               <span className="text-xs text-[#0091ae] font-mono">{formatPrice(deal.list_price)}</span>
                             ) : (
                               <span />
-                            )}
-                            {deal.property_type && (
-                              <span className="text-xs text-gray-500">{deal.property_type}</span>
                             )}
                           </div>
                           {deal.closing_date && (
@@ -459,33 +453,33 @@ export default function DealsPipeline({
             </div>
 
             {/* Closed stages row */}
-            {(deals.some((d) => d.stage === 'Sold') || deals.some((d) => d.stage === 'Lost')) && (
+            {(deals.some((d) => d.stage === 'Won') || deals.some((d) => d.stage === 'Lost')) && (
               <div className="grid grid-cols-2 gap-4 mt-6 border-t border-gray-200 pt-6">
-                {/* Sold */}
+                {/* Won */}
                 <div>
                   <div className="flex items-center justify-between mb-3 px-1">
-                    <DealStageBadge stage="Sold" />
+                    <DealStageBadge stage="Won" />
                     <div className="flex flex-col items-end leading-none gap-0.5">
                       <span className="text-xs text-gray-400 font-medium">
-                        {deals.filter((d) => d.stage === 'Sold').length} {deals.filter((d) => d.stage === 'Sold').length === 1 ? 'deal' : 'deals'}
+                        {deals.filter((d) => d.stage === 'Won').length} {deals.filter((d) => d.stage === 'Won').length === 1 ? 'deal' : 'deals'}
                       </span>
-                      {deals.filter((d) => d.stage === 'Sold').reduce((s, d) => s + (d.sale_price || d.list_price || 0), 0) > 0 && (
+                      {deals.filter((d) => d.stage === 'Won').reduce((s, d) => s + (d.sale_price || d.list_price || 0), 0) > 0 && (
                         <span className="text-xs text-gray-500 font-mono">
-                          {formatPrice(deals.filter((d) => d.stage === 'Sold').reduce((s, d) => s + (d.sale_price || d.list_price || 0), 0))}
+                          {formatPrice(deals.filter((d) => d.stage === 'Won').reduce((s, d) => s + (d.sale_price || d.list_price || 0), 0))}
                         </span>
                       )}
                     </div>
                   </div>
                   <div className="space-y-2">
-                    {deals.filter((d) => d.stage === 'Sold').map((deal) => (
+                    {deals.filter((d) => d.stage === 'Won').map((deal) => (
                       <div
                         key={deal.id}
                         onClick={() => setSelectedDeal(deal)}
                         className="bg-white shadow-sm border border-emerald-200 rounded-lg p-3 cursor-pointer hover:border-emerald-300 hover:shadow transition-colors"
                       >
                         <p className="text-sm text-[#1a1a2e] font-medium truncate">{deal.contact_name}</p>
-                        {deal.property_address && (
-                          <p className="text-xs text-gray-500 mt-1 truncate">{deal.property_address}</p>
+                        {deal.description && (
+                          <p className="text-xs text-gray-500 mt-1 truncate">{deal.description}</p>
                         )}
                         {deal.sale_price && (
                           <p className="text-xs text-emerald-600 font-mono mt-1">{formatPrice(deal.sale_price)}</p>
@@ -510,8 +504,8 @@ export default function DealsPipeline({
                         className="bg-white shadow-sm border border-red-200 rounded-lg p-3 cursor-pointer hover:border-red-300 hover:shadow transition-colors"
                       >
                         <p className="text-sm text-[#1a1a2e] font-medium truncate">{deal.contact_name}</p>
-                        {deal.property_address && (
-                          <p className="text-xs text-gray-500 mt-1 truncate">{deal.property_address}</p>
+                        {deal.description && (
+                          <p className="text-xs text-gray-500 mt-1 truncate">{deal.description}</p>
                         )}
                       </div>
                     ))}
@@ -536,9 +530,7 @@ export default function DealsPipeline({
                   />
                 </th>
                 <th className="px-4 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Contact</th>
-                <th className="px-4 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Property</th>
-                <th className="px-4 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Type</th>
-                <th className="px-4 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">MLS #</th>
+                <th className="px-4 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Description</th>
                 <th className="px-4 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">List Price</th>
                 <th className="px-4 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Stage</th>
                 <th className="px-4 py-3 text-xs text-gray-500 uppercase tracking-wider font-medium">Closing</th>
@@ -547,7 +539,7 @@ export default function DealsPipeline({
             <tbody>
               {filteredDeals.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-gray-500">
+                  <td colSpan={6} className="px-4 py-12 text-center text-gray-500">
                     No deals found. Click &quot;+ New Deal&quot; to create one.
                   </td>
                 </tr>
@@ -569,9 +561,7 @@ export default function DealsPipeline({
                         />
                       </td>
                       <td className="px-4 py-3 text-[#1a1a2e] font-medium whitespace-nowrap">{deal.contact_name}</td>
-                      <td className="px-4 py-3 text-gray-500 text-xs max-w-[200px] truncate">{deal.property_address || '---'}</td>
-                      <td className="px-4 py-3 text-gray-500 text-xs">{deal.property_type || '---'}</td>
-                      <td className="px-4 py-3 text-gray-500 font-mono text-xs">{deal.mls_number || '---'}</td>
+                      <td className="px-4 py-3 text-gray-500 text-xs max-w-[200px] truncate">{deal.description || '---'}</td>
                       <td className="px-4 py-3 text-[#0091ae] font-mono text-xs">{formatPrice(deal.list_price) || '---'}</td>
                       <td className="px-4 py-3"><DealStageBadge stage={deal.stage} /></td>
                       <td className={`px-4 py-3 font-mono text-xs whitespace-nowrap ${deal.closing_date ? closingDateColor(deal.closing_date) : 'text-gray-500'}`}>
@@ -583,7 +573,7 @@ export default function DealsPipeline({
                   {/* Closed deals divider */}
                   {closedTableDeals.length > 0 && (
                     <tr>
-                      <td colSpan={8} className="px-4 py-2 bg-gray-50 border-t border-gray-200">
+                      <td colSpan={6} className="px-4 py-2 bg-gray-50 border-t border-gray-200">
                         <span className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Closed Deals</span>
                       </td>
                     </tr>
@@ -605,9 +595,7 @@ export default function DealsPipeline({
                         />
                       </td>
                       <td className="px-4 py-3 text-[#1a1a2e] font-medium whitespace-nowrap">{deal.contact_name}</td>
-                      <td className="px-4 py-3 text-gray-500 text-xs max-w-[200px] truncate">{deal.property_address || '---'}</td>
-                      <td className="px-4 py-3 text-gray-500 text-xs">{deal.property_type || '---'}</td>
-                      <td className="px-4 py-3 text-gray-500 font-mono text-xs">{deal.mls_number || '---'}</td>
+                      <td className="px-4 py-3 text-gray-500 text-xs max-w-[200px] truncate">{deal.description || '---'}</td>
                       <td className="px-4 py-3 text-[#0091ae] font-mono text-xs">{formatPrice(deal.list_price) || '---'}</td>
                       <td className="px-4 py-3"><DealStageBadge stage={deal.stage} /></td>
                       <td className="px-4 py-3 text-gray-500 font-mono text-xs whitespace-nowrap">

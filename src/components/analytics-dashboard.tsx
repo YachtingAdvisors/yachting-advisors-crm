@@ -6,7 +6,7 @@ import { DealStage, DEAL_STAGES, DEAL_STAGE_COLORS } from '@/lib/types';
 interface TopDeal {
   id: string;
   contact_name: string;
-  property_address: string | null;
+  description: string | null;
   list_price: number | null;
   stage: DealStage;
 }
@@ -57,14 +57,13 @@ function DeltaArrow({ current, previous }: { current: number; previous: number }
 
 const STAGE_BAR_COLORS: Record<string, string> = {
   Prospecting: 'bg-slate-500',
-  'Pre-Approval': 'bg-blue-500',
-  Showings: 'bg-violet-500',
-  'Offer Submitted': 'bg-amber-500',
-  'Under Contract': 'bg-orange-500',
-  Inspection: 'bg-cyan-500',
-  Appraisal: 'bg-teal-500',
+  Discovery: 'bg-blue-500',
+  Proposal: 'bg-violet-500',
+  Negotiation: 'bg-amber-500',
+  'Contract Sent': 'bg-orange-500',
+  'Under Review': 'bg-cyan-500',
   Closing: 'bg-indigo-500',
-  Sold: 'bg-emerald-500',
+  Won: 'bg-emerald-500',
   Lost: 'bg-red-500',
 };
 
@@ -114,8 +113,8 @@ export default function AnalyticsDashboard({ clientId }: { clientId: string | nu
     <div className="space-y-8">
       {/* Key Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard label="Total Pipeline Value" value={formatCurrency(data.pipelineValue)} subtext={`${data.totalDeals - (data.dealsByStage['Sold'] || 0) - (data.dealsByStage['Lost'] || 0)} active deals`} />
-        <MetricCard label="Closed Revenue" value={formatCurrency(data.closedValue)} subtext={`${data.dealsByStage['Sold'] || 0} deals sold`} />
+        <MetricCard label="Total Pipeline Value" value={formatCurrency(data.pipelineValue)} subtext={`${data.totalDeals - (data.dealsByStage['Won'] || 0) - (data.dealsByStage['Lost'] || 0)} active deals`} />
+        <MetricCard label="Closed Revenue" value={formatCurrency(data.closedValue)} subtext={`${data.dealsByStage['Won'] || 0} deals won`} />
         <MetricCard label="Conversion Rate" value={`${data.conversionRate.toFixed(1)}%`} subtext={`${data.leadsByStatus['Converted'] || 0} of ${data.totalLeads} leads`} />
         <MetricCard label="Avg Days to Close" value={data.avgDaysToClose > 0 ? `${Math.round(data.avgDaysToClose)}` : '—'} subtext={data.avgDealSize > 0 ? `Avg deal: ${formatCurrency(data.avgDealSize)}` : 'No closed deals yet'} />
       </div>
@@ -258,8 +257,8 @@ export default function AnalyticsDashboard({ clientId }: { clientId: string | nu
               <div key={deal.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-[#1a1a2e] truncate">{deal.contact_name}</p>
-                  {deal.property_address && (
-                    <p className="text-xs text-gray-500 truncate">{deal.property_address}</p>
+                  {deal.description && (
+                    <p className="text-xs text-gray-500 truncate">{deal.description}</p>
                   )}
                 </div>
                 <span className="text-sm font-mono text-[#33475b]">

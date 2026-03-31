@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
   const { data: leads } = await leadsQuery;
 
   // Fetch deals
-  let dealsQuery = supabase.from('deals').select('contact_name, contact_email, contact_phone, stage, property_address, created_at, updated_at, client_id');
+  let dealsQuery = supabase.from('deals').select('contact_name, contact_email, contact_phone, stage, created_at, updated_at, client_id');
   if (allowedClientIds) {
     dealsQuery = dealsQuery.in('client_id', allowedClientIds);
   }

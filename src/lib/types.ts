@@ -1,46 +1,41 @@
 export type LeadStatus = 'New' | 'Qualified' | 'Converted' | 'Inactive';
 export type LeadSource = 'Meta' | 'Instagram' | 'Website';
 
-// Real estate MLS deal stages
+// Deal pipeline stages
 export type DealStage =
   | 'Prospecting'
-  | 'Pre-Approval'
-  | 'Showings'
-  | 'Offer Submitted'
-  | 'Under Contract'
-  | 'Inspection'
-  | 'Appraisal'
+  | 'Discovery'
+  | 'Proposal'
+  | 'Negotiation'
+  | 'Contract Sent'
+  | 'Under Review'
   | 'Closing'
-  | 'Sold'
+  | 'Won'
   | 'Lost';
 
 export const DEAL_STAGES: DealStage[] = [
   'Prospecting',
-  'Pre-Approval',
-  'Showings',
-  'Offer Submitted',
-  'Under Contract',
-  'Inspection',
-  'Appraisal',
+  'Discovery',
+  'Proposal',
+  'Negotiation',
+  'Contract Sent',
+  'Under Review',
   'Closing',
-  'Sold',
+  'Won',
   'Lost',
 ];
 
 export const DEAL_STAGE_COLORS: Record<DealStage, string> = {
   Prospecting: 'bg-slate-50 text-slate-700 border-slate-200',
-  'Pre-Approval': 'bg-blue-50 text-blue-700 border-blue-200',
-  Showings: 'bg-violet-50 text-violet-700 border-violet-200',
-  'Offer Submitted': 'bg-amber-50 text-amber-700 border-amber-200',
-  'Under Contract': 'bg-orange-50 text-orange-700 border-orange-200',
-  Inspection: 'bg-cyan-50 text-cyan-700 border-cyan-200',
-  Appraisal: 'bg-teal-50 text-teal-700 border-teal-200',
+  Discovery: 'bg-blue-50 text-blue-700 border-blue-200',
+  Proposal: 'bg-violet-50 text-violet-700 border-violet-200',
+  Negotiation: 'bg-amber-50 text-amber-700 border-amber-200',
+  'Contract Sent': 'bg-orange-50 text-orange-700 border-orange-200',
+  'Under Review': 'bg-cyan-50 text-cyan-700 border-cyan-200',
   Closing: 'bg-indigo-50 text-indigo-700 border-indigo-200',
-  Sold: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  Won: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   Lost: 'bg-red-50 text-red-700 border-red-200',
 };
-
-export type PropertyType = 'Single Family' | 'Condo' | 'Townhouse' | 'Multi-Family' | 'Land' | 'Commercial';
 
 export interface Deal {
   id: string;
@@ -49,9 +44,7 @@ export interface Deal {
   contact_name: string;
   contact_email: string | null;
   contact_phone: string | null;
-  property_address: string | null;
-  property_type: PropertyType | null;
-  mls_number: string | null;
+  description: string | null;
   list_price: number | null;
   offer_price: number | null;
   sale_price: number | null;

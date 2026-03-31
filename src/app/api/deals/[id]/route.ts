@@ -47,7 +47,7 @@ export async function PATCH(
   const allowed: Record<string, unknown> = {};
   const fields = [
     'stage', 'contact_name', 'contact_email', 'contact_phone',
-    'property_address', 'property_type', 'mls_number',
+    'description',
     'list_price', 'offer_price', 'sale_price',
     'closing_date', 'agent_notes',
     'commission_rate', 'commission_amount', 'buyer_agent', 'listing_agent',

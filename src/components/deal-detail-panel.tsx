@@ -32,7 +32,7 @@ export default function DealDetailPanel({ deal, onClose, onUpdate, onDelete }: P
   const [listPrice, setListPrice] = useState(deal.list_price != null ? String(deal.list_price) : '');
   const [offerPrice, setOfferPrice] = useState(deal.offer_price != null ? String(deal.offer_price) : '');
   const [salePrice, setSalePrice] = useState(deal.sale_price != null ? String(deal.sale_price) : '');
-  const [mlsNumber, setMlsNumber] = useState(deal.mls_number || '');
+  const [description, setDescription] = useState(deal.description || '');
   const [closingDate, setClosingDate] = useState(deal.closing_date || '');
   const [commissionRate, setCommissionRate] = useState(deal.commission_rate != null ? String(deal.commission_rate) : '');
   const [commissionAmount, setCommissionAmount] = useState(deal.commission_amount != null ? String(deal.commission_amount) : '');
@@ -46,7 +46,7 @@ export default function DealDetailPanel({ deal, onClose, onUpdate, onDelete }: P
     setListPrice(deal.list_price != null ? String(deal.list_price) : '');
     setOfferPrice(deal.offer_price != null ? String(deal.offer_price) : '');
     setSalePrice(deal.sale_price != null ? String(deal.sale_price) : '');
-    setMlsNumber(deal.mls_number || '');
+    setDescription(deal.description || '');
     setClosingDate(deal.closing_date || '');
     setCommissionRate(deal.commission_rate != null ? String(deal.commission_rate) : '');
     setCommissionAmount(deal.commission_amount != null ? String(deal.commission_amount) : '');
@@ -206,50 +206,22 @@ export default function DealDetailPanel({ deal, onClose, onUpdate, onDelete }: P
             )}
           </div>
 
-          {/* Property Details */}
+          {/* Deal Description */}
           <div className="space-y-4 mb-6">
-            <p className="text-xs text-gray-500 uppercase tracking-wider">Property Details</p>
-            {deal.property_address && (
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                <p className="text-xs text-gray-500">Address</p>
-                <p className="text-sm text-[#33475b] mt-1">{deal.property_address}</p>
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-3">
-              {deal.property_type && (
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                  <p className="text-xs text-gray-500">Property Type</p>
-                  <p className="text-sm text-[#33475b] mt-1">{deal.property_type}</p>
-                </div>
-              )}
-              {/* MLS # — editable + search link */}
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-gray-500">MLS #</p>
-                  {deal.mls_number && (
-                    <a
-                      href={`https://www.realtor.com/realestateandhomes-search?keywords=${encodeURIComponent(deal.mls_number)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-[#0091ae] hover:text-[#007a94] underline underline-offset-2"
-                    >
-                      View on MLS
-                    </a>
-                  )}
-                </div>
-                <p className="text-sm text-[#33475b] mt-1 font-mono">{deal.mls_number || '---'}</p>
-                <input
-                  type="text"
-                  value={mlsNumber}
-                  onChange={(e) => setMlsNumber(e.target.value)}
-                  onBlur={() => {
-                    const val = mlsNumber.trim() || null;
-                    if (val !== deal.mls_number) updateField('mls_number', val);
-                  }}
-                  placeholder="MLS-12345"
-                  className={editInputClass}
-                />
-              </div>
+            <p className="text-xs text-gray-500 uppercase tracking-wider">Deal Details</p>
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+              <p className="text-xs text-gray-500 mb-1.5">Description</p>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                onBlur={() => {
+                  const val = description.trim() || null;
+                  if (val !== deal.description) updateField('description', val);
+                }}
+                rows={3}
+                placeholder="Add a description for this deal..."
+                className="w-full bg-white border border-gray-300 rounded text-sm text-[#33475b] p-2 placeholder-gray-400 focus:outline-none focus:border-[#0091ae] resize-none"
+              />
             </div>
           </div>
 

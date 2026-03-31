@@ -56,27 +56,27 @@ export async function GET(req: NextRequest) {
     if (deal.stage in dealsByStage) dealsByStage[deal.stage]++;
   }
 
-  // Pipeline value: sum of list_price for active deals (not Sold, not Lost)
-  const activeDeals = allDeals.filter((d: any) => d.stage !== 'Sold' && d.stage !== 'Lost');
+  // Pipeline value: sum of list_price for active deals (not Won, not Lost)
+  const activeDeals = allDeals.filter((d: any) => d.stage !== 'Won' && d.stage !== 'Lost');
   const pipelineValue = activeDeals.reduce((sum: number, d: any) => sum + (d.list_price || 0), 0);
 
-  // Closed value: sum of sale_price for Sold deals
-  const soldDeals = allDeals.filter((d: any) => d.stage === 'Sold');
-  const closedValue = soldDeals.reduce((sum: number, d: any) => sum + (d.sale_price || 0), 0);
+  // Closed value: sum of sale_price for Won deals
+  const wonDeals = allDeals.filter((d: any) => d.stage === 'Won');
+  const closedValue = wonDeals.reduce((sum: number, d: any) => sum + (d.sale_price || 0), 0);
 
   // Conversion rate
   const totalLeads = allLeads.length;
   const convertedLeads = leadsByStatus['Converted'] || 0;
   const conversionRate = totalLeads > 0 ? (convertedLeads / totalLeads) * 100 : 0;
 
-  // Average deal size (avg sale_price for Sold deals)
-  const avgDealSize = soldDeals.length > 0
-    ? soldDeals.reduce((sum: number, d: any) => sum + (d.sale_price || 0), 0) / soldDeals.length
+  // Average deal size (avg sale_price for Won deals)
+  const avgDealSize = wonDeals.length > 0
+    ? wonDeals.reduce((sum: number, d: any) => sum + (d.sale_price || 0), 0) / wonDeals.length
     : 0;
 
-  // Average days to close (closing_date - created_at for Sold deals)
+  // Average days to close (closing_date - created_at for Won deals)
   let avgDaysToClose = 0;
-  const soldWithDates = soldDeals.filter((d: any) => d.closing_date && d.created_at);
+  const soldWithDates = wonDeals.filter((d: any) => d.closing_date && d.created_at);
   if (soldWithDates.length > 0) {
     const totalDays = soldWithDates.reduce((sum: number, d: any) => {
       const close = new Date(d.closing_date).getTime();
@@ -110,7 +110,7 @@ export async function GET(req: NextRequest) {
     .map((d: any) => ({
       id: d.id,
       contact_name: d.contact_name,
-      property_address: d.property_address,
+      description: d.description,
       list_price: d.list_price,
       stage: d.stage as DealStage,
     }));
