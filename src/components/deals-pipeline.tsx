@@ -311,7 +311,7 @@ export default function DealsPipeline({
       )}
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <div className="bg-white shadow-sm border border-gray-200 rounded-xl p-4">
           <p className="text-xs text-gray-500 uppercase tracking-wider">Active Deals</p>
           <p className="text-2xl font-semibold mt-1 text-[#1a1a2e]">{activeDeals.length}</p>
@@ -402,12 +402,12 @@ export default function DealsPipeline({
           )}
 
           <div ref={boardScrollRef} className="overflow-x-auto pb-4">
-            <div className="flex gap-4" style={{ minWidth: `${PIPELINE_STAGES.length * 260}px` }}>
+            <div className="flex gap-3" style={{ minWidth: `${PIPELINE_STAGES.length * 180}px` }}>
               {PIPELINE_STAGES.map((stage) => {
                 const stageDeals = filteredDeals.filter((d) => d.stage === stage);
                 const stageValue = stageDeals.reduce((sum, d) => sum + (d.list_price || 0), 0);
                 return (
-                  <div key={stage} className="flex-1 min-w-[240px]">
+                  <div key={stage} className="flex-1 min-w-[160px]">
                     {/* Column header — stacked count + value */}
                     <div className="flex items-center justify-between mb-3 px-1">
                       <DealStageBadge stage={stage} />
@@ -424,9 +424,9 @@ export default function DealsPipeline({
                         <div
                           key={deal.id}
                           onClick={() => setSelectedDeal(deal)}
-                          className="bg-white shadow-sm border border-gray-200 rounded-lg p-3 cursor-pointer hover:border-gray-300 hover:shadow transition-colors"
+                          className="bg-white shadow-sm border border-gray-200 rounded-lg p-2.5 cursor-pointer hover:border-gray-300 hover:shadow transition-colors"
                         >
-                          <p className="text-sm text-[#1a1a2e] font-medium truncate">{deal.contact_name}</p>
+                          <p className="text-xs text-[#1a1a2e] font-medium truncate">{deal.contact_name}</p>
                           {deal.property_address && (
                             <p className="text-xs text-gray-500 mt-1 truncate">{deal.property_address}</p>
                           )}
