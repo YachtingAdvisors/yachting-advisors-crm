@@ -52,18 +52,21 @@ export default function LoginPage() {
     }
     setLoading(true);
 
-    const supabase = createBrowserClient();
-    const { error: magicError } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/`,
-      },
-    });
+    try {
+      const res = await fetch('/api/auth/magic-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
 
-    if (magicError) {
-      setError(magicError.message);
-    } else {
-      setMessage('Check your email for a sign-in link. It may take a minute to arrive.');
+      if (!res.ok) {
+        setError(data.error || 'Failed to send sign-in link');
+      } else {
+        setMessage('Check your email for a sign-in link. It should arrive within a minute.');
+      }
+    } catch {
+      setError('Network error. Please try again.');
     }
     setLoading(false);
   }
