@@ -12,7 +12,7 @@ interface TourStep {
 const TOUR_STEPS: TourStep[] = [
   {
     target: 'center',
-    title: 'Welcome to Real Estate CRM!',
+    title: 'Welcome to Yachting Advisors!',
     description:
       'Let\u2019s take a quick tour to get you up to speed. This will only take a minute.',
     position: 'center',

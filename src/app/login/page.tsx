@@ -103,7 +103,7 @@ export default function LoginPage() {
           Yachting Advisors
         </h1>
         <p className="text-gray-500 text-center mb-8 text-sm">
-          Real Estate CRM
+          Yachting Advisors
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
