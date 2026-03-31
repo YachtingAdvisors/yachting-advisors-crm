@@ -41,6 +41,7 @@ export default function AdminSettingsPage() {
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [tableMissing, setTableMissing] = useState(false);
 
+  // Admin page keeps its own auth check since it needs admin-level access
   useEffect(() => {
     const supabase = createBrowserClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -225,16 +226,11 @@ export default function AdminSettingsPage() {
   }
 
   return (
-    <div className="min-h-screen">
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
+    <>
+      <header className="bg-white border-b border-gray-200 px-6 py-3 sticky top-0 z-30">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <h1 className="text-lg font-semibold text-[#1a1a2e]">Admin Settings</h1>
-          <button
-            onClick={() => router.push('/')}
-            className="text-sm text-gray-500 hover:text-[#33475b] transition-colors"
-          >
-            Back to Dashboard
-          </button>
+          <span className="text-sm text-gray-500">{user?.email}</span>
         </div>
       </header>
 
@@ -482,6 +478,6 @@ export default function AdminSettingsPage() {
           )}
         </div>
       </main>
-    </div>
+    </>
   );
 }
