@@ -4,24 +4,27 @@ import { useState } from 'react';
 import { createBrowserClient } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 
-type LoginMode = 'password' | 'magic-link' | 'reset';
+type Mode = 'login' | 'signup' | 'reset';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState<LoginMode>('password');
+  const [mode, setMode] = useState<Mode>('login');
   const router = useRouter();
 
-  function switchMode(newMode: LoginMode) {
+  function switchMode(newMode: Mode) {
     setMode(newMode);
     setError('');
     setMessage('');
+    setPassword('');
+    setConfirmPassword('');
   }
 
-  async function handlePasswordLogin(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -42,33 +45,52 @@ export default function LoginPage() {
     router.refresh();
   }
 
-  async function handleMagicLink(e: React.FormEvent) {
+  async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
     setError('');
     setMessage('');
-    if (!email) {
-      setError('Enter your email address');
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters');
       return;
     }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
     setLoading(true);
 
-    try {
-      const res = await fetch('/api/auth/magic-link', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json();
+    const supabase = createBrowserClient();
+    const { error: signupError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/`,
+      },
+    });
 
-      if (!res.ok) {
-        setError(data.error || 'Failed to send sign-in link');
-      } else {
-        setMessage('Check your email for a sign-in link. It should arrive within a minute.');
-      }
-    } catch {
-      setError('Network error. Please try again.');
+    if (signupError) {
+      setError(signupError.message);
+      setLoading(false);
+      return;
     }
-    setLoading(false);
+
+    // Try to sign in immediately (if email confirmation is disabled)
+    const { error: loginError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (loginError) {
+      // Likely needs email confirmation
+      setMessage('Account created! Check your email to confirm, then sign in.');
+      setLoading(false);
+      return;
+    }
+
+    router.push('/');
+    router.refresh();
   }
 
   async function handleReset(e: React.FormEvent) {
@@ -89,24 +111,24 @@ export default function LoginPage() {
     if (resetError) {
       setError(resetError.message);
     } else {
-      setMessage('Check your email for a password reset link. Use it to set your password.');
+      setMessage('Check your email for a password reset link.');
     }
     setLoading(false);
   }
 
   const handleSubmit =
-    mode === 'password' ? handlePasswordLogin
-    : mode === 'magic-link' ? handleMagicLink
+    mode === 'login' ? handleLogin
+    : mode === 'signup' ? handleSignup
     : handleReset;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f5f8fa] px-4">
       <div className="w-full max-w-sm bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-        <h1 className="text-2xl font-bold text-[#1a1a2e] text-center mb-2">
+        <h1 className="text-2xl font-bold text-[#1a1a2e] text-center mb-1">
           Yachting Advisors
         </h1>
-        <p className="text-gray-500 text-center mb-8 text-sm">
-          Yachting Advisors
+        <p className="text-gray-400 text-center mb-8 text-sm">
+          {mode === 'login' ? 'Sign in to your account' : mode === 'signup' ? 'Create your account' : 'Reset your password'}
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -135,7 +157,7 @@ export default function LoginPage() {
             />
           </div>
 
-          {mode === 'password' && (
+          {mode !== 'reset' && (
             <div>
               <label className="block text-xs text-gray-500 uppercase tracking-wider mb-1.5">
                 Password
@@ -145,6 +167,24 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                minLength={6}
+                placeholder={mode === 'signup' ? 'At least 6 characters' : ''}
+                className="w-full bg-white border border-gray-300 rounded-lg text-sm text-[#33475b] px-4 py-2.5 focus:outline-none focus:border-[#ff7a59] focus:ring-1 focus:ring-[#ff7a59]"
+              />
+            </div>
+          )}
+
+          {mode === 'signup' && (
+            <div>
+              <label className="block text-xs text-gray-500 uppercase tracking-wider mb-1.5">
+                Confirm Password
+              </label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={6}
                 className="w-full bg-white border border-gray-300 rounded-lg text-sm text-[#33475b] px-4 py-2.5 focus:outline-none focus:border-[#ff7a59] focus:ring-1 focus:ring-[#ff7a59]"
               />
             </div>
@@ -156,71 +196,46 @@ export default function LoginPage() {
             className="w-full bg-[#ff7a59] hover:bg-[#e8664a] text-white font-medium py-2.5 rounded-lg transition-colors disabled:opacity-50"
           >
             {loading
-              ? mode === 'password' ? 'Signing in...' : 'Sending...'
-              : mode === 'password' ? 'Sign In'
-              : mode === 'magic-link' ? 'Send Sign-In Link'
-              : 'Send Reset Link'}
+              ? mode === 'login' ? 'Signing in...' : mode === 'signup' ? 'Creating account...' : 'Sending...'
+              : mode === 'login' ? 'Sign In' : mode === 'signup' ? 'Create Account' : 'Send Reset Link'}
           </button>
-
-          {/* Divider */}
-          {mode === 'password' && (
-            <div className="relative my-2">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200" />
-              </div>
-              <div className="relative flex justify-center text-xs">
-                <span className="bg-white px-3 text-gray-400">or</span>
-              </div>
-            </div>
-          )}
-
-          {/* Magic link option */}
-          {mode === 'password' && (
-            <button
-              type="button"
-              onClick={() => switchMode('magic-link')}
-              className="w-full py-2.5 text-sm border border-gray-300 rounded-lg text-[#33475b] hover:bg-gray-50 transition-colors"
-            >
-              Sign in with email link (no password)
-            </button>
-          )}
 
           {/* Footer links */}
           <div className="flex flex-col items-center gap-2 pt-1">
-            {mode === 'password' && (
-              <button
-                type="button"
-                onClick={() => switchMode('reset')}
-                className="text-sm text-gray-500 hover:text-[#33475b] transition-colors"
-              >
-                Forgot password?
-              </button>
+            {mode === 'login' && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => switchMode('signup')}
+                  className="text-sm text-[#0091ae] hover:text-[#007a94] transition-colors"
+                >
+                  First time? Create an account
+                </button>
+                <button
+                  type="button"
+                  onClick={() => switchMode('reset')}
+                  className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  Forgot password?
+                </button>
+              </>
             )}
-            {mode !== 'password' && (
+            {mode === 'signup' && (
               <button
                 type="button"
-                onClick={() => switchMode('password')}
+                onClick={() => switchMode('login')}
                 className="text-sm text-gray-500 hover:text-[#33475b] transition-colors"
               >
-                Back to Sign In
+                Already have an account? Sign in
               </button>
             )}
             {mode === 'reset' && (
               <button
                 type="button"
-                onClick={() => switchMode('magic-link')}
-                className="text-xs text-[#0091ae] hover:text-[#007a94] transition-colors"
+                onClick={() => switchMode('login')}
+                className="text-sm text-gray-500 hover:text-[#33475b] transition-colors"
               >
-                First time? Sign in with email link instead
-              </button>
-            )}
-            {mode === 'magic-link' && (
-              <button
-                type="button"
-                onClick={() => switchMode('reset')}
-                className="text-xs text-[#0091ae] hover:text-[#007a94] transition-colors"
-              >
-                Need to set a password? Use forgot password
+                Back to Sign In
               </button>
             )}
           </div>
