@@ -30,6 +30,17 @@ export default function AdminSettingsPage() {
   const [message, setMessage] = useState('');
   const router = useRouter();
 
+  // Listing feeds state
+  const [feeds, setFeeds] = useState<{
+    boats_com: { enabled: boolean; api_key: string; testing: boolean; status: string | null };
+    yacht_broker: { enabled: boolean; api_token: string; company_id: string; testing: boolean; status: string | null };
+    yatco: { enabled: boolean; api_token: string; testing: boolean; status: string | null };
+  }>({
+    boats_com: { enabled: false, api_key: '', testing: false, status: null },
+    yacht_broker: { enabled: false, api_token: '', company_id: '', testing: false, status: null },
+    yatco: { enabled: false, api_token: '', testing: false, status: null },
+  });
+
   // Sheet sources state
   const [sheetSources, setSheetSources] = useState<SheetSource[]>([]);
   const [sheetUrl, setSheetUrl] = useState('');
@@ -92,6 +103,76 @@ export default function AdminSettingsPage() {
         setTableMissing(data.tableMissing || false);
       })
       .catch(() => {});
+  }
+
+  // Fetch listing feeds on mount
+  useEffect(() => {
+    if (!user) return;
+    fetch('/api/admin/listing-feeds')
+      .then((r) => r.json())
+      .then((data) => {
+        const feedList = data.feeds || [];
+        for (const f of feedList) {
+          if (f.feed_type === 'boats_com') {
+            setFeeds((prev) => ({
+              ...prev,
+              boats_com: { ...prev.boats_com, enabled: f.enabled, api_key: f.credentials?.api_key || '' },
+            }));
+          } else if (f.feed_type === 'yacht_broker') {
+            setFeeds((prev) => ({
+              ...prev,
+              yacht_broker: { ...prev.yacht_broker, enabled: f.enabled, api_token: f.credentials?.api_token || '', company_id: f.credentials?.company_id || '' },
+            }));
+          } else if (f.feed_type === 'yatco') {
+            setFeeds((prev) => ({
+              ...prev,
+              yatco: { ...prev.yatco, enabled: f.enabled, api_token: f.credentials?.api_token || '' },
+            }));
+          }
+        }
+      })
+      .catch(() => {});
+  }, [user]);
+
+  function saveFeed(feedType: string, enabled: boolean, credentials: Record<string, string>) {
+    fetch('/api/admin/listing-feeds', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ feed_type: feedType, enabled, credentials }),
+    }).catch(() => {});
+  }
+
+  async function testFeedConnection(feedType: string) {
+    setFeeds((prev) => ({
+      ...prev,
+      [feedType]: { ...prev[feedType as keyof typeof prev], testing: true, status: null },
+    }));
+    try {
+      const res = await fetch(`/api/listings?feed=${feedType}&test=1&limit=1`);
+      const data = await res.json();
+      if (res.ok && data.listings && data.listings.length > 0) {
+        const count = data.total || data.listings.length;
+        setFeeds((prev) => ({
+          ...prev,
+          [feedType]: { ...prev[feedType as keyof typeof prev], testing: false, status: `Connected — ${count} listings found` },
+        }));
+      } else if (res.ok) {
+        setFeeds((prev) => ({
+          ...prev,
+          [feedType]: { ...prev[feedType as keyof typeof prev], testing: false, status: 'Connected — 0 listings found' },
+        }));
+      } else {
+        setFeeds((prev) => ({
+          ...prev,
+          [feedType]: { ...prev[feedType as keyof typeof prev], testing: false, status: `Connection failed: ${data.error || 'Unknown error'}` },
+        }));
+      }
+    } catch {
+      setFeeds((prev) => ({
+        ...prev,
+        [feedType]: { ...prev[feedType as keyof typeof prev], testing: false, status: 'Connection failed: Network error' },
+      }));
+    }
   }
 
   function addEmail() {
@@ -476,6 +557,214 @@ export default function AdminSettingsPage() {
               {message}
             </span>
           )}
+        </div>
+
+        {/* ========== LISTING FEEDS ========== */}
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
+          <h2 className="text-[#1a1a2e] font-medium mb-1">Listing Feeds</h2>
+          <p className="text-gray-500 text-sm mb-5">
+            Connect yacht MLS listing feeds to display inventory
+          </p>
+
+          <div className="space-y-4">
+            {/* Boats.com / Boat Wizard */}
+            <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="text-sm font-medium text-[#1a1a2e]">Boats.com / Boat Wizard</h3>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={feeds.boats_com.enabled}
+                    onChange={(e) => {
+                      const enabled = e.target.checked;
+                      setFeeds((prev) => ({
+                        ...prev,
+                        boats_com: { ...prev.boats_com, enabled },
+                      }));
+                      saveFeed('boats_com', enabled, { api_key: feeds.boats_com.api_key });
+                    }}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#0091ae]" />
+                </label>
+              </div>
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  value={feeds.boats_com.api_key}
+                  onChange={(e) =>
+                    setFeeds((prev) => ({
+                      ...prev,
+                      boats_com: { ...prev.boats_com, api_key: e.target.value },
+                    }))
+                  }
+                  onBlur={() =>
+                    saveFeed('boats_com', feeds.boats_com.enabled, { api_key: feeds.boats_com.api_key })
+                  }
+                  placeholder="API Key"
+                  className="w-full bg-white border border-gray-300 rounded-lg text-sm text-[#33475b] px-4 py-2.5 focus:outline-none focus:border-[#0091ae]"
+                />
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => testFeedConnection('boats_com')}
+                    disabled={feeds.boats_com.testing}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-[#33475b] hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    {feeds.boats_com.testing ? 'Testing...' : 'Test Connection'}
+                  </button>
+                  {feeds.boats_com.status && (
+                    <span
+                      className={`text-sm ${feeds.boats_com.status.startsWith('Connected') ? 'text-emerald-600' : 'text-red-500'}`}
+                    >
+                      {feeds.boats_com.status}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* YachtBroker.org / IYBA */}
+            <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="text-sm font-medium text-[#1a1a2e]">YachtBroker.org / IYBA</h3>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={feeds.yacht_broker.enabled}
+                    onChange={(e) => {
+                      const enabled = e.target.checked;
+                      setFeeds((prev) => ({
+                        ...prev,
+                        yacht_broker: { ...prev.yacht_broker, enabled },
+                      }));
+                      saveFeed('yacht_broker', enabled, {
+                        api_token: feeds.yacht_broker.api_token,
+                        company_id: feeds.yacht_broker.company_id,
+                      });
+                    }}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#0091ae]" />
+                </label>
+              </div>
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  value={feeds.yacht_broker.api_token}
+                  onChange={(e) =>
+                    setFeeds((prev) => ({
+                      ...prev,
+                      yacht_broker: { ...prev.yacht_broker, api_token: e.target.value },
+                    }))
+                  }
+                  onBlur={() =>
+                    saveFeed('yacht_broker', feeds.yacht_broker.enabled, {
+                      api_token: feeds.yacht_broker.api_token,
+                      company_id: feeds.yacht_broker.company_id,
+                    })
+                  }
+                  placeholder="API Token"
+                  className="w-full bg-white border border-gray-300 rounded-lg text-sm text-[#33475b] px-4 py-2.5 focus:outline-none focus:border-[#0091ae]"
+                />
+                <input
+                  type="text"
+                  value={feeds.yacht_broker.company_id}
+                  onChange={(e) =>
+                    setFeeds((prev) => ({
+                      ...prev,
+                      yacht_broker: { ...prev.yacht_broker, company_id: e.target.value },
+                    }))
+                  }
+                  onBlur={() =>
+                    saveFeed('yacht_broker', feeds.yacht_broker.enabled, {
+                      api_token: feeds.yacht_broker.api_token,
+                      company_id: feeds.yacht_broker.company_id,
+                    })
+                  }
+                  placeholder="Company ID"
+                  className="w-full bg-white border border-gray-300 rounded-lg text-sm text-[#33475b] px-4 py-2.5 focus:outline-none focus:border-[#0091ae]"
+                />
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => testFeedConnection('yacht_broker')}
+                    disabled={feeds.yacht_broker.testing}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-[#33475b] hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    {feeds.yacht_broker.testing ? 'Testing...' : 'Test Connection'}
+                  </button>
+                  {feeds.yacht_broker.status && (
+                    <span
+                      className={`text-sm ${feeds.yacht_broker.status.startsWith('Connected') ? 'text-emerald-600' : 'text-red-500'}`}
+                    >
+                      {feeds.yacht_broker.status}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Yatco */}
+            <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="text-sm font-medium text-[#1a1a2e]">Yatco</h3>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={feeds.yatco.enabled}
+                    onChange={(e) => {
+                      const enabled = e.target.checked;
+                      setFeeds((prev) => ({
+                        ...prev,
+                        yatco: { ...prev.yatco, enabled },
+                      }));
+                      saveFeed('yatco', enabled, { api_token: feeds.yatco.api_token });
+                    }}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#0091ae]" />
+                </label>
+              </div>
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  value={feeds.yatco.api_token}
+                  onChange={(e) =>
+                    setFeeds((prev) => ({
+                      ...prev,
+                      yatco: { ...prev.yatco, api_token: e.target.value },
+                    }))
+                  }
+                  onBlur={() =>
+                    saveFeed('yatco', feeds.yatco.enabled, { api_token: feeds.yatco.api_token })
+                  }
+                  placeholder="API Token (base64)"
+                  className="w-full bg-white border border-gray-300 rounded-lg text-sm text-[#33475b] px-4 py-2.5 focus:outline-none focus:border-[#0091ae]"
+                />
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => testFeedConnection('yatco')}
+                    disabled={feeds.yatco.testing}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-[#33475b] hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    {feeds.yatco.testing ? 'Testing...' : 'Test Connection'}
+                  </button>
+                  {feeds.yatco.status && (
+                    <span
+                      className={`text-sm ${feeds.yatco.status.startsWith('Connected') ? 'text-emerald-600' : 'text-red-500'}`}
+                    >
+                      {feeds.yatco.status}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </main>
     </>

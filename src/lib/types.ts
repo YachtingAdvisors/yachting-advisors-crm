@@ -110,3 +110,46 @@ export function isAdmin(email: string | undefined): boolean {
   if (!email) return false;
   return ADMIN_EMAILS.includes(email.toLowerCase());
 }
+
+// Listing feed sources
+export type ListingFeedType = 'boats_com' | 'yacht_broker' | 'yatco';
+
+export interface Listing {
+  id: string;
+  source: ListingFeedType;
+  name: string;
+  make: string;
+  model: string;
+  year: number;
+  price: number | null;
+  currency: string;
+  loa_feet: number | null;
+  beam_feet: number | null;
+  location_city: string | null;
+  location_state: string | null;
+  location_country: string | null;
+  condition: string | null;
+  status: string;
+  category: string | null;
+  hull_material: string | null;
+  engine_count: number | null;
+  engine_make: string | null;
+  engine_hours: number | null;
+  cabins: number | null;
+  description: string | null;
+  images: string[];
+  broker_name: string | null;
+  last_updated: string;
+}
+
+export interface ListingFeedSettings {
+  id: string;
+  client_id: string;
+  feed_type: ListingFeedType;
+  api_key: string | null;
+  api_token: string | null;
+  company_id: string | null;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}

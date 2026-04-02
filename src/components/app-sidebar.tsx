@@ -41,6 +41,16 @@ const navItems = [
     ),
   },
   {
+    label: 'Listings',
+    href: '/listings',
+    tourId: 'nav-listings',
+    icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.75 13.5h16.5m-16.5 0c0 2.485 2.015 4.5 4.5 4.5h7.5c2.485 0 4.5-2.015 4.5-4.5m-16.5 0L2.25 12l2.25-3h15l2.25 3-1.5 1.5M8.25 6.75V3.75a1.5 1.5 0 011.5-1.5h4.5a1.5 1.5 0 011.5 1.5v3" />
+      </svg>
+    ),
+  },
+  {
     label: 'Analytics',
     href: '/analytics',
     tourId: 'nav-analytics',
