@@ -5,11 +5,11 @@ ON CONFLICT DO NOTHING;
 
 -- Set up notification settings (email to sales@globalyachtpartners.com, SMS to both numbers)
 INSERT INTO notification_settings (client_id, notification_emails, notification_phones)
-SELECT id, ARRAY['sales@globalyachtpartners.com'], ARRAY['+14106937337', '+16198479208', '+19544106536']
+SELECT id, ARRAY['sales@globalyachtpartners.com'], ARRAY['+14106937337', '+16198479208', '+19544106536', '+15612516245']
 FROM clients WHERE name = 'Global Yacht Partners'
 ON CONFLICT (client_id) DO UPDATE
 SET notification_emails = ARRAY['sales@globalyachtpartners.com'],
-    notification_phones = ARRAY['+14106937337', '+16198479208', '+19544106536'];
+    notification_phones = ARRAY['+14106937337', '+16198479208', '+19544106536', '+15612516245'];
 
 -- Connect Google Sheet as sync source
 INSERT INTO sheet_sources (client_id, spreadsheet_id, gid, source_name, enabled)
