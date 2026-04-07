@@ -5,10 +5,18 @@ import { isAdmin } from '@/lib/types';
 import { sendLeadNotification } from '@/lib/notifications';
 
 export async function POST(req: NextRequest) {
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !isAdmin(user.email)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  // Allow auth via session OR service role key in Authorization header
+  const authHeader = req.headers.get('authorization');
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (authHeader === `Bearer ${serviceKey}`) {
+    // Authorized via service role key
+  } else {
+    const supabase = await createSupabaseServer();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || !isAdmin(user.email)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
   }
 
   const { client_id } = await req.json();
