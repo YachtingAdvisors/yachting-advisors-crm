@@ -110,7 +110,10 @@ export async function sendLeadNotification(
       .maybeSingle();
 
     const fromNumber = process.env.TWILIO_PHONE_NUMBER || '+19549476277';
-    const smsBody = `New Lead — ${client.name}\nName: ${lead.name}${lead.phone ? `\nPhone: ${lead.phone}` : ''}${lead.email ? `\nEmail: ${lead.email}` : ''}${lead.campaign ? `\nCampaign: ${lead.campaign}` : ''}`;
+    const formLines = lead.formResponses
+      .map((fr) => `${fr.question}: ${fr.answer}`)
+      .join('\n');
+    const smsBody = `New Lead — ${client.name}\nName: ${lead.name}${lead.phone ? `\nPhone: ${lead.phone}` : ''}${lead.email ? `\nEmail: ${lead.email}` : ''}${lead.campaign ? `\nCampaign: ${lead.campaign}` : ''}${formLines ? `\n\n${formLines}` : ''}`;
 
     const smsRecipients = new Set<string>([DEFAULT_SMS_RECIPIENT]);
     if (settings?.notification_phones) {

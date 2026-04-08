@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
-import { fetchSheetConfigs, syncSheetByConfig } from '@/lib/sheets-sync';
+import { fetchSheetConfigs, syncAllSheetTabs } from '@/lib/sheets-sync';
 import { sendLeadNotification } from '@/lib/notifications';
 
 export const dynamic = 'force-dynamic';
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
         .eq('client_id', config.clientId);
       existingIds = new Set((existing || []).map((l: any) => l.meta_lead_id));
 
-      const result = await syncSheetByConfig(supabase, config);
+      const result = await syncAllSheetTabs(supabase, config);
       results[config.sourceName] = result;
 
       // Send notifications for truly new leads (not previously in DB)

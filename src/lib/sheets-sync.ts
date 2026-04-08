@@ -132,6 +132,22 @@ function cleanPhone(phone: string): string | null {
   return cleaned || null;
 }
 
+// Standard columns that are NOT form responses — everything else is a custom form field
+const STANDARD_COLUMNS = new Set([
+  'id', 'created_time', 'ad_id', 'ad_name', 'adset_id', 'adset_name',
+  'campaign_id', 'campaign_name', 'form_id', 'form_name', 'is_organic',
+  'platform', 'email', 'full_name', 'phone_number', 'lead_status',
+]);
+
+/** Turn a snake_case CSV header into a readable question label */
+function headerToLabel(header: string): string {
+  return header
+    .replace(/[_]+/g, ' ')
+    .replace(/[?.]+$/g, '')
+    .replace(/\b\w/g, c => c.toUpperCase())
+    .trim();
+}
+
 export function parseSheetRows(rows: Record<string, string>[]): ParsedLead[] {
   return rows
     .filter(row => {
@@ -142,17 +158,20 @@ export function parseSheetRows(rows: Record<string, string>[]): ParsedLead[] {
       return true;
     })
     .map(row => {
+      // Dynamically capture ALL non-standard columns as form responses
       const formResponses: Array<{ question: string; answer: string }> = [];
+      for (const [key, value] of Object.entries(row)) {
+        if (!STANDARD_COLUMNS.has(key) && value && value.trim()) {
+          formResponses.push({
+            question: headerToLabel(key),
+            answer: value.trim(),
+          });
+        }
+      }
 
-      const ownYacht = row['do_you_currently_own_a_yacht?'] || '';
-      if (ownYacht) {
-        formResponses.push({ question: 'Do you currently own a yacht?', answer: ownYacht });
-      }
-      const boatDetails = row['if_yes_please_provide_the_make_year_length_and_model'] ||
-                          row['if_yes,_please_provide_the_make,_year,_length,_and_model.'] || '';
-      if (boatDetails) {
-        formResponses.push({ question: 'Make, Year, Length, and Model', answer: boatDetails });
-      }
+      // Determine source from platform field
+      const platform = (row['platform'] || '').toLowerCase();
+      const source = platform === 'ig' || platform === 'instagram' ? 'Instagram' : 'Meta';
 
       return {
         meta_lead_id: row['id'] || '',
@@ -176,6 +195,90 @@ export async function fetchSheetCSV(spreadsheetId: string, gid = '0'): Promise<s
     throw new Error(`Failed to fetch sheet (${res.status}): ${await res.text().catch(() => '')}`);
   }
   return res.text();
+}
+
+/**
+ * Discover all tab gids from a Google Spreadsheet.
+ * Fetches the HTML page and extracts gid values from the sheet tab markup.
+ * Falls back to just ['0'] if discovery fails.
+ */
+export async function discoverSheetGids(spreadsheetId: string): Promise<string[]> {
+  try {
+    const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/pubhtml`;
+    const res = await fetch(url, { redirect: 'follow' });
+    if (!res.ok) return ['0'];
+    const html = await res.text();
+    // Google Sheets pubhtml has tab links with gid= params
+    const gidMatches = html.match(/gid=(\d+)/g);
+    if (!gidMatches || gidMatches.length === 0) return ['0'];
+    const gids = [...new Set(gidMatches.map(m => m.replace('gid=', '')))];
+    return gids;
+  } catch {
+    return ['0'];
+  }
+}
+
+/**
+ * Sync ALL tabs from a spreadsheet, not just a single gid.
+ * Discovers tabs automatically, fetches each, and syncs leads from all.
+ */
+export async function syncAllSheetTabs(
+  supabase: any,
+  config: SheetConfig
+): Promise<{ synced: number; skipped: number; errors: number; tabs: number }> {
+  // If a specific gid is set, only sync that one
+  const gids = config.gid ? [config.gid] : await discoverSheetGids(config.spreadsheetId);
+
+  let totalSynced = 0;
+  let totalSkipped = 0;
+  let totalErrors = 0;
+  let tabsProcessed = 0;
+
+  for (const gid of gids) {
+    try {
+      const csv = await fetchSheetCSV(config.spreadsheetId, gid);
+      const rows = parseCSV(csv);
+      // Only process sheets that look like lead data (have 'id' and 'email' columns)
+      if (rows.length === 0 || !rows[0]['id'] || !rows[0]['email']) continue;
+
+      const leads = parseSheetRows(rows);
+      tabsProcessed++;
+
+      for (const lead of leads) {
+        try {
+          const { error } = await supabase.from('leads').upsert(
+            {
+              meta_lead_id: lead.meta_lead_id,
+              client_id: config.clientId,
+              name: lead.name,
+              email: lead.email,
+              phone: lead.phone,
+              source: lead.platform === 'ig' ? 'Instagram' : 'Meta',
+              campaign: lead.campaign,
+              ad_name: lead.ad_name,
+              form_name: lead.form_name,
+              form_responses: lead.form_responses,
+              status: 'New',
+            },
+            { onConflict: 'meta_lead_id', ignoreDuplicates: true }
+          );
+
+          if (error) {
+            if (error.code === '23505') totalSkipped++;
+            else totalErrors++;
+          } else {
+            totalSynced++;
+          }
+        } catch {
+          totalErrors++;
+        }
+      }
+    } catch {
+      // Tab couldn't be fetched — skip it
+    }
+  }
+
+  return { synced: totalSynced, skipped: totalSkipped, errors: totalErrors, tabs: tabsProcessed };
 }
 
 export async function syncSheetByConfig(
