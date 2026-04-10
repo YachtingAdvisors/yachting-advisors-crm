@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -74,8 +75,15 @@ export default function AppSidebar({ isAdmin, onLogout, userEmail }: AppSidebarP
   return (
     <aside data-tour="sidebar" className="fixed left-0 top-0 h-screen w-[60px] bg-[#2d3e50] flex flex-col items-center z-40">
       {/* Brand */}
-      <div className="py-4 flex items-center justify-center">
-        <span className="text-[#ff7a59] font-bold text-lg">RE</span>
+      <div className="py-3 px-2 flex items-center justify-center">
+        <Image
+          src="/logo-white.png"
+          alt="Yachting Advisors"
+          width={44}
+          height={44}
+          className="object-contain"
+          priority
+        />
       </div>
 
       {/* Main nav */}
