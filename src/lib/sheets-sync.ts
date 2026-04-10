@@ -199,35 +199,107 @@ export async function fetchSheetCSV(spreadsheetId: string, gid = '0'): Promise<s
 
 /**
  * Discover all tab gids from a Google Spreadsheet.
- * Fetches the HTML page and extracts gid values from the sheet tab markup.
- * Falls back to just ['0'] if discovery fails.
+ * Strategy:
+ * 1. Try /pubhtml page (works for publicly published sheets)
+ * 2. Try the /edit HTML page (works for publicly shared sheets)
+ * 3. Fall back to brute-force: try gid=0 through a set of common gids
+ *    plus try fetching CSV — if it returns valid data, the gid exists.
  */
 export async function discoverSheetGids(spreadsheetId: string): Promise<string[]> {
+  // Strategy 1: pubhtml
   try {
-    const url = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/pubhtml`;
-    const res = await fetch(url, { redirect: 'follow' });
-    if (!res.ok) return ['0'];
-    const html = await res.text();
-    // Google Sheets pubhtml has tab links with gid= params
-    const gidMatches = html.match(/gid=(\d+)/g);
-    if (!gidMatches || gidMatches.length === 0) return ['0'];
-    const gids = [...new Set(gidMatches.map(m => m.replace('gid=', '')))];
-    return gids;
-  } catch {
-    return ['0'];
+    const pubRes = await fetch(
+      `https://docs.google.com/spreadsheets/d/${spreadsheetId}/pubhtml`,
+      { redirect: 'follow' }
+    );
+    if (pubRes.ok) {
+      const html = await pubRes.text();
+      const gidMatches = html.match(/gid=(\d+)/g);
+      if (gidMatches && gidMatches.length > 0) {
+        return [...new Set(gidMatches.map(m => m.replace('gid=', '')))];
+      }
+    }
+  } catch { /* continue */ }
+
+  // Strategy 2: edit page (publicly shared sheets show tab bar in HTML)
+  try {
+    const editRes = await fetch(
+      `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`,
+      { redirect: 'follow' }
+    );
+    if (editRes.ok) {
+      const html = await editRes.text();
+      const gidMatches = html.match(/gid[=:](\d+)/g);
+      if (gidMatches && gidMatches.length > 0) {
+        return [...new Set(gidMatches.map(m => m.replace(/gid[=:]/, '')))];
+      }
+    }
+  } catch { /* continue */ }
+
+  // Strategy 3: brute-force CSV probe — try gid=0 and common auto-generated gids
+  // Google Sheets auto-generates random large gids for new tabs.
+  // We probe by trying to export CSV; if we get valid CSV (starts with a letter/quote), the tab exists.
+  const foundGids: string[] = [];
+  const probeGids = ['0']; // Always try gid 0
+
+  // Also try to fetch the HTML to find gids embedded anywhere
+  try {
+    const htmlRes = await fetch(
+      `https://docs.google.com/spreadsheets/d/${spreadsheetId}/gviz/tq?tqx=out:csv&headers=0&range=A1&sheet=*`,
+      { redirect: 'follow' }
+    );
+    // Fallback: just try gid 0
+    if (htmlRes.ok) {
+      const text = await htmlRes.text();
+      if (text.trim()) foundGids.push('0');
+    }
+  } catch { /* continue */ }
+
+  // Probe gid=0
+  for (const gid of probeGids) {
+    try {
+      const csv = await fetchSheetCSV(spreadsheetId, gid);
+      if (csv && csv.trim().length > 10) {
+        foundGids.push(gid);
+      }
+    } catch { /* gid doesn't exist */ }
   }
+
+  return foundGids.length > 0 ? [...new Set(foundGids)] : ['0'];
 }
 
 /**
  * Sync ALL tabs from a spreadsheet, not just a single gid.
  * Discovers tabs automatically, fetches each, and syncs leads from all.
+ * Also queries sheet_sources for any other registered gids for the same spreadsheet.
  */
 export async function syncAllSheetTabs(
   supabase: any,
   config: SheetConfig
 ): Promise<{ synced: number; skipped: number; errors: number; tabs: number }> {
-  // If a specific gid is set, only sync that one
-  const gids = config.gid ? [config.gid] : await discoverSheetGids(config.spreadsheetId);
+  let gids: string[];
+  if (config.gid) {
+    // Specific gid set — only sync that one
+    gids = [config.gid];
+  } else {
+    // Try auto-discovery
+    const discovered = await discoverSheetGids(config.spreadsheetId);
+
+    // Also fetch any other registered gids for this spreadsheet from DB
+    try {
+      const { data: siblings } = await supabase
+        .from('sheet_sources')
+        .select('gid')
+        .eq('spreadsheet_id', config.spreadsheetId)
+        .eq('enabled', true);
+      const dbGids = (siblings || [])
+        .map((s: any) => s.gid)
+        .filter((g: string | null) => g != null) as string[];
+      gids = [...new Set([...discovered, ...dbGids])];
+    } catch {
+      gids = discovered;
+    }
+  }
 
   let totalSynced = 0;
   let totalSkipped = 0;
