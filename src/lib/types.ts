@@ -153,3 +153,31 @@ export interface ListingFeedSettings {
   created_at: string;
   updated_at: string;
 }
+
+// Embeddable lead capture forms
+export interface FormField {
+  name: string;
+  label: string;
+  type: 'text' | 'email' | 'phone' | 'textarea' | 'select';
+  required: boolean;
+  options?: string[];
+}
+
+export interface FormSettings {
+  heading?: string;
+  description?: string;
+  submitButtonText?: string;
+  successMessage?: string;
+  accentColor?: string;
+}
+
+export interface Form {
+  id: string;
+  client_id: string;
+  form_name: string;
+  fields: FormField[];
+  settings: FormSettings;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}

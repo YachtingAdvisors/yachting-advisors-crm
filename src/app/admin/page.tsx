@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createBrowserClient } from '@/lib/supabase';
 import { isAdmin } from '@/lib/types';
 import type { Client } from '@/lib/types';
@@ -316,6 +317,10 @@ export default function AdminSettingsPage() {
       </header>
 
       <main className="max-w-3xl mx-auto px-6 py-8 space-y-8">
+        <Link href="/admin/forms" className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm text-[#0091ae] hover:bg-gray-50 transition-colors mb-6">
+          Form Builder &rarr;
+        </Link>
+
         {/* ========== GOOGLE SHEET SOURCES ========== */}
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
           <h2 className="text-[#1a1a2e] font-medium mb-1">Google Sheet Sources</h2>
