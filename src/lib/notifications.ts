@@ -62,7 +62,9 @@ export async function sendLeadNotification(
     }
 
     if (recipients.size > 0) {
+      const EMAIL_SKIP_FIELDS = new Set(['full_name', 'name', 'first_name', 'last_name', 'email', 'phone', 'phone_number']);
       const formResponsesHtml = lead.formResponses
+        .filter((fr) => !EMAIL_SKIP_FIELDS.has(fr.question.toLowerCase().replace(/\s+/g, '_')))
         .map((fr) => `<tr><td style="padding:6px 12px;color:#9ca3af;border-bottom:1px solid #1f2937">${fr.question}</td><td style="padding:6px 12px;color:#e5e7eb;border-bottom:1px solid #1f2937">${fr.answer}</td></tr>`)
         .join('');
 
@@ -110,7 +112,9 @@ export async function sendLeadNotification(
       .maybeSingle();
 
     const fromNumber = process.env.TWILIO_PHONE_NUMBER || '+19549476277';
+    const SKIP_FIELDS = new Set(['full_name', 'name', 'first_name', 'last_name', 'email', 'phone', 'phone_number']);
     const formLines = lead.formResponses
+      .filter((fr) => !SKIP_FIELDS.has(fr.question.toLowerCase().replace(/\s+/g, '_')))
       .map((fr) => `${fr.question}: ${fr.answer}`)
       .join('\n');
     const smsBody = `New Lead — ${client.name}\nName: ${lead.name}${lead.phone ? `\nPhone: ${lead.phone}` : ''}${lead.email ? `\nEmail: ${lead.email}` : ''}${lead.campaign ? `\nCampaign: ${lead.campaign}` : ''}${formLines ? `\n\n${formLines}` : ''}`;
