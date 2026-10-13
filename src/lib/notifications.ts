@@ -1,8 +1,12 @@
 import nodemailer from 'nodemailer';
 import twilio from 'twilio';
 import { ADMIN_EMAILS } from '@/lib/types';
+import { claimDelivery, parseRecipientConfig, recordDelivery, resolveSmsRecipients, type DeliveryChannel, type DeliveryResult, type DeliveryState } from '@/lib/notification-delivery';
 
-const DEFAULT_SMS_RECIPIENT = '+14106937337';
+
+export type NotificationChannel = DeliveryChannel;
+export type NotificationDeliveryState = DeliveryState;
+export type NotificationDeliveryResult = DeliveryResult;
 
 function getTransporter() {
   return nodemailer.createTransport({
@@ -35,10 +39,24 @@ interface LeadNotificationPayload {
 export async function sendLeadNotification(
   supabase: any,
   client: any,
-  lead: LeadNotificationPayload
-) {
+  lead: LeadNotificationPayload & { id?: string },
+  options: { channels?: NotificationChannel[]; recipients?: string[] } = {}
+): Promise<NotificationDeliveryResult[]> {
+  const channels = options.channels || ['email', 'sms'];
+  const results: NotificationDeliveryResult[] = [];
+
+  async function claim(channel: NotificationChannel, recipient: string) {
+    return lead.id ? claimDelivery(supabase, lead.id, channel, recipient) : true;
+  }
+
+  async function record(channel: NotificationChannel, recipient: string, result: Omit<NotificationDeliveryResult, 'channel' | 'recipient'>) {
+    const fullResult = { channel, recipient, ...result } as NotificationDeliveryResult;
+    results.push(fullResult);
+    if (lead.id) await recordDelivery(supabase, lead.id, fullResult);
+  }
+
   // --- Email notifications ---
-  try {
+  if (channels.includes('email')) try {
     const { data: userClients } = await supabase
       .from('user_clients')
       .select('user_email')
@@ -89,21 +107,36 @@ export async function sendLeadNotification(
       `;
 
       const transporter = getTransporter();
-      await transporter.sendMail({
-        from: `Yachting Advisors CRM <${process.env.SMTP_USER}>`,
-        to: Array.from(recipients).join(', '),
-        subject: `New Lead: ${lead.name} — ${client.name}`,
-        html,
-      });
+      for (const recipient of recipients) {
+        if (!(await claim('email', recipient))) {
+          await record('email', recipient, { state: 'skipped' });
+          continue;
+        }
+        try {
+          const info = await transporter.sendMail({
+            from: `Yachting Advisors CRM <${process.env.SMTP_USER}>`,
+            to: recipient,
+            subject: `New Lead: ${lead.name} — ${client.name}`,
+            html,
+          });
+          await record('email', recipient, {
+            state: 'accepted',
+            providerMessageId: info.messageId,
+            providerStatus: 'smtp-accepted',
+          });
+        } catch (err) {
+          await record('email', recipient, { state: 'failed', error: err instanceof Error ? err.message : String(err) });
+        }
+      }
     }
   } catch (err) {
     console.error('[Email] Failed to send lead notification:', err);
   }
 
   // --- SMS notifications ---
-  try {
+  if (channels.includes('sms')) try {
     const twilioClient = getTwilioClient();
-    if (!twilioClient) return;
+    if (!twilioClient) return results;
 
     const { data: settings } = await supabase
       .from('notification_settings')
@@ -111,7 +144,11 @@ export async function sendLeadNotification(
       .eq('client_id', client.id)
       .maybeSingle();
 
-    const fromNumber = process.env.TWILIO_PHONE_NUMBER || '+19549476277';
+    const fromNumber = process.env.TWILIO_PHONE_NUMBER;
+    if (!fromNumber) {
+      console.error('[SMS] TWILIO_PHONE_NUMBER is not configured');
+      return results;
+    }
     const SKIP_FIELDS = new Set(['full_name', 'name', 'first_name', 'last_name', 'email', 'phone', 'phone_number']);
     const formLines = lead.formResponses
       .filter((fr) => !SKIP_FIELDS.has(fr.question.toLowerCase().replace(/\s+/g, '_')))
@@ -119,21 +156,44 @@ export async function sendLeadNotification(
       .join('\n');
     const smsBody = `New Lead — ${client.name}\nName: ${lead.name}${lead.phone ? `\nPhone: ${lead.phone}` : ''}${lead.email ? `\nEmail: ${lead.email}` : ''}${lead.campaign ? `\nCampaign: ${lead.campaign}` : ''}${formLines ? `\n\n${formLines}` : ''}`;
 
-    const smsRecipients = new Set<string>([DEFAULT_SMS_RECIPIENT]);
-    if (settings?.notification_phones) {
-      for (const p of settings.notification_phones) {
-        smsRecipients.add(p);
-      }
-    }
+    const fiveStarRecipients = parseRecipientConfig(process.env.FIVESTAR_SMS_RECIPIENTS, 3);
+    const smsRecipients = resolveSmsRecipients(
+      client.name,
+      settings?.notification_phones || [],
+      options.recipients,
+      process.env.DEFAULT_SMS_RECIPIENT,
+      fiveStarRecipients
+    );
 
     for (const to of smsRecipients) {
-      await twilioClient.messages.create({
-        body: smsBody,
-        from: fromNumber,
-        to,
-      });
+      if (!(await claim('sms', to))) {
+        await record('sms', to, { state: 'skipped' });
+        continue;
+      }
+      try {
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL
+          || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : '')
+          || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '');
+        const statusCallback = appUrl
+          ? `${appUrl}/api/webhooks/twilio/status`
+          : undefined;
+        const message = await twilioClient.messages.create({ body: smsBody, from: fromNumber, to, ...(statusCallback ? { statusCallback } : {}) });
+        const providerState: NotificationDeliveryState = message.status === 'delivered'
+          ? 'delivered'
+          : ['failed', 'undelivered'].includes(message.status)
+            ? 'failed'
+            : 'accepted';
+        await record('sms', to, {
+          state: providerState,
+          providerMessageId: message.sid,
+          providerStatus: message.status,
+        });
+      } catch (err) {
+        await record('sms', to, { state: 'unknown', error: err instanceof Error ? err.message : String(err) });
+      }
     }
   } catch (err) {
     console.error('[SMS] Failed to send lead SMS:', err);
   }
+  return results;
 }
