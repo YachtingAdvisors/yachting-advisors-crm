@@ -21,10 +21,16 @@ function getTransporter() {
 }
 
 function getTwilioClient() {
-  const sid = process.env.TWILIO_ACCOUNT_SID;
-  const token = process.env.TWILIO_AUTH_TOKEN;
-  if (!sid || !token) return null;
-  return twilio(sid, token);
+  const accountSid = process.env.TWILIO_ACCOUNT_SID || process.env.TWILIO_YA_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  if (accountSid && authToken) return twilio(accountSid, authToken);
+
+  const apiKeySid = process.env.TWILIO_YA_API_KEY_SID;
+  const apiKeySecret = process.env.TWILIO_YA_API_KEY_SECRET;
+  if (accountSid && apiKeySid && apiKeySecret) {
+    return twilio(apiKeySid, apiKeySecret, { accountSid });
+  }
+  return null;
 }
 
 interface LeadNotificationPayload {
@@ -144,7 +150,7 @@ export async function sendLeadNotification(
       .eq('client_id', client.id)
       .maybeSingle();
 
-    const fromNumber = process.env.TWILIO_PHONE_NUMBER;
+    const fromNumber = process.env.TWILIO_PHONE_NUMBER || process.env.TWILIO_YA_FROM_NUMBER;
     if (!fromNumber) {
       console.error('[SMS] TWILIO_PHONE_NUMBER is not configured');
       return results;
@@ -174,7 +180,7 @@ export async function sendLeadNotification(
         const appUrl = process.env.NEXT_PUBLIC_APP_URL
           || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : '')
           || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '');
-        const statusCallback = appUrl
+        const statusCallback = appUrl && process.env.TWILIO_AUTH_TOKEN
           ? `${appUrl}/api/webhooks/twilio/status`
           : undefined;
         const message = await twilioClient.messages.create({ body: smsBody, from: fromNumber, to, ...(statusCallback ? { statusCallback } : {}) });
