@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer';
 import twilio from 'twilio';
 import { ADMIN_EMAILS } from '@/lib/types';
 import { claimDelivery, parseRecipientConfig, recordDelivery, resolveSmsRecipients, type DeliveryChannel, type DeliveryResult, type DeliveryState } from '@/lib/notification-delivery';
+import { resolveTwilioRuntime } from '@/lib/twilio-runtime';
 
 
 export type NotificationChannel = DeliveryChannel;
@@ -21,16 +22,10 @@ function getTransporter() {
 }
 
 function getTwilioClient() {
-  const accountSid = process.env.TWILIO_ACCOUNT_SID || process.env.TWILIO_YA_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  if (accountSid && authToken) return twilio(accountSid, authToken);
-
-  const apiKeySid = process.env.TWILIO_YA_API_KEY_SID;
-  const apiKeySecret = process.env.TWILIO_YA_API_KEY_SECRET;
-  if (accountSid && apiKeySid && apiKeySecret) {
-    return twilio(apiKeySid, apiKeySecret, { accountSid });
-  }
-  return null;
+  const runtime = resolveTwilioRuntime();
+  if (!runtime) return null;
+  if (runtime.kind === 'auth-token') return twilio(runtime.accountSid, runtime.authToken);
+  return twilio(runtime.apiKeySid, runtime.apiKeySecret, { accountSid: runtime.accountSid });
 }
 
 interface LeadNotificationPayload {

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { claimDelivery, parseRecipientConfig, recordDelivery, resolveSmsRecipients } from '../src/lib/notification-delivery';
+import { resolveTwilioRuntime } from '../src/lib/twilio-runtime';
 
 type Row = { id: string; lead_id: string; channel: string; recipient: string; state: string; attempt_count: number; [key: string]: unknown };
 
@@ -81,4 +82,18 @@ test('Five Star future routing unions required and configured recipients, while 
   assert.deepEqual(resolveSmsRecipients('Five Star Claims Adjusting', ['+15555550100'], ['+15555550101', '+15555550102', '+15555550103'], undefined, ['+15555550999']), [
     '+15555550101', '+15555550102', '+15555550103',
   ]);
+});
+
+test('Twilio runtime accepts the established YA API-key configuration', () => {
+  assert.deepEqual(resolveTwilioRuntime({
+    TWILIO_YA_ACCOUNT_SID: 'AC-test',
+    TWILIO_YA_API_KEY_SID: 'SK-test',
+    TWILIO_YA_API_KEY_SECRET: 'secret-test',
+  }), {
+    kind: 'api-key', accountSid: 'AC-test', apiKeySid: 'SK-test', apiKeySecret: 'secret-test',
+  });
+  assert.equal(resolveTwilioRuntime({ TWILIO_YA_ACCOUNT_SID: 'AC-test' }), null);
+  assert.deepEqual(resolveTwilioRuntime({ TWILIO_ACCOUNT_SID: 'AC-test', TWILIO_AUTH_TOKEN: 'token-test' }), {
+    kind: 'auth-token', accountSid: 'AC-test', authToken: 'token-test',
+  });
 });
